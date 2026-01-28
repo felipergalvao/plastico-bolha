@@ -6,13 +6,13 @@ import 'dart:ui'; // Para ImageFilter
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration/vibration.dart';
+// import 'package:vibration/vibration.dart'; // Desativado para teste
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  MobileAds.instance.initialize();
+  // MobileAds.instance.initialize(); // Desativado para teste
   runApp(const BubbleTycoonApp());
 }
 
@@ -72,10 +72,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Timer? _autoClickTimer;
   Timer? _saveTimer;
-  final AudioPlayer _sfxPlayer = AudioPlayer();
+  final AudioPlayer _sfxPlayer = AudioPlayer(); // Instância única de AudioPlayer
 
   BannerAd? _bannerAd;
-  bool _isBannerAdLoaded = false;
+  final bool _isBannerAdLoaded = false;
 
   final List<GlobalKey<_BubbleWidgetState>> _bubbleKeys = List.generate(
       48, (_) => GlobalKey<_BubbleWidgetState>()); // Chaves para cada bolha
@@ -97,7 +97,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _saveTimer =
         Timer.periodic(const Duration(seconds: 10), (timer) => _saveProgress());
 
-    _loadBannerAd();
+    // _loadBannerAd(); // Desativado para teste
   }
 
   @override
@@ -132,6 +132,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   // --- ADS ---
+  /*
   void _loadBannerAd() {
     _bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Test Ad Unit ID
@@ -154,10 +155,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     )..load();
   }
+  */
 
   // --- AÇÕES ---
   void _playSound(String fileName) {
-    AudioPlayer().play(AssetSource('audio/$fileName'),
+    _sfxPlayer.play(AssetSource('audio/$fileName'),
         mode: PlayerMode.lowLatency, volume: 0.7);
   }
 
@@ -165,9 +167,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() => money += clickValue);
     _playSound('pop.wav');
 
+    /*
     Vibration.hasVibrator().then((has) {
-      if (has == true) Vibration.vibrate(duration: 30);
+      if (has == true) {
+        if (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS) {
+          Vibration.vibrate(duration: 30);
+        }
+      }
     });
+    */
   }
 
   void _buyUpgrade(bool isAuto) {
@@ -180,6 +189,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           levelAuto++;
           autoClickRate += 2;
           costAutoUpgrade *= 1.5;
+        } else {
+          levelClick++;
+          clickValue++;
+          costClickUpgrade *= 1.5;
         }
       });
       _saveProgress();
@@ -314,7 +327,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // ESPAÇO ADMOB
+            // ESPAÇO ADMOB (Desativado para teste)
+            /*
             if (_isBannerAdLoaded && _bannerAd != null)
               SizedBox(
                 width: _bannerAd!.size.width.toDouble(),
@@ -327,6 +341,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 color: Colors.grey[200],
                 child: const Center(child: Text("Google AdMob Banner Area (Placeholder)")),
               ),
+            */
+            Container(
+              height: 50,
+              color: Colors.grey[200],
+              child: const Center(
+                  child: Text("Google AdMob Banner Area (Placeholder)")),
 
             // LOJA
             Container(
