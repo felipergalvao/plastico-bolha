@@ -12,7 +12,6 @@ import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // APP ID PRODUÇÃO: ca-app-pub-1206696143040453~3450374275
   MobileAds.instance.initialize();
   runApp(const BubbleTycoonApp());
 }
@@ -27,7 +26,8 @@ class BubbleTycoonApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        textTheme: GoogleFonts.vt323TextTheme(),
+        // FONTE NOVA: Fredoka (Redondinha e Moderna)
+        textTheme: GoogleFonts.fredokaTextTheme(),
       ),
       home: const GameScreen(),
     );
@@ -54,21 +54,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   final AudioPlayer _sfxPlayer = AudioPlayer();
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
-
-  // AdMob Interstitial
   InterstitialAd? _interstitialAd;
 
+  // Grid Config (8 linhas para caber o Ad sem espremer)
   final int _columns = 5;
-  final int _rows = 9;
-  final int _totalBubbles = 45;
-  final List<GlobalKey<_BubbleWidgetState>> _bubbleKeys = List.generate(
-    45,
-    (_) => GlobalKey<_BubbleWidgetState>(),
-  );
+  final int _rows = 8; 
+  final int _totalBubbles = 40;
+  final double _gridPadding = 15.0;
+
+  late List<GlobalKey<_BubbleWidgetState>> _bubbleKeys;
 
   @override
   void initState() {
     super.initState();
+    _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<_BubbleWidgetState>());
     _loadProgress();
     _sfxPlayer.setReleaseMode(ReleaseMode.stop);
 
@@ -82,23 +81,42 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _loadInterstitialAd();
   }
 
+  // FORMATADOR DE DINHEIRO (Ex: 1,500 ou 1.2M)
+  String formatMoney(double value) {
+    if (value >= 1000000) {
+      return "${(value / 1000000).toStringAsFixed(2)}M"; 
+    }
+    if (value >= 1000) {
+      return value.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+    }
+    return value.toStringAsFixed(0);
+  }
+
   int get currentLevel {
     return (0.5 + sqrt(0.25 + (totalEarnings / 250))).floor();
   }
 
   double get currentLevelProgress {
-    double xpInCurrentLevel =
-        totalEarnings - (250.0 * currentLevel * (currentLevel - 1));
+    double xpInCurrentLevel = totalEarnings - (250.0 * currentLevel * (currentLevel - 1));
     double xpRequired = currentLevel * 500.0;
     return (xpInCurrentLevel / xpRequired).clamp(0.0, 1.0);
   }
 
   Color get levelColor {
     int lvl = currentLevel;
-    if (lvl >= 20) return const Color(0xFF00FF41);
-    if (lvl >= 10) return const Color(0xFFFFD700);
-    if (lvl >= 5) return const Color(0xFFBC13FE);
-    return Colors.cyan;
+    if (lvl >= 20) return const Color(0xFF00FF41); 
+    if (lvl >= 10) return const Color(0xFFFFD700); 
+    if (lvl >= 5) return const Color(0xFFBC13FE);  
+    return Colors.cyan; 
+  }
+
+  String get nextGoalText {
+    int lvl = currentLevel;
+    if (lvl < 5) return "Próxima Cor: Roxo (Lvl 5)";
+    if (lvl < 10) return "Próxima Cor: Ouro (Lvl 10)";
+    if (lvl < 20) return "Próxima Cor: Hacker (Lvl 20)";
+    return "Mestre das Bolhas!";
   }
 
   void _addMoney(double amount) {
@@ -111,25 +129,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onLevelUp() {
-    // Exibe Anúncio Interstitial no Level Up
     if (_interstitialAd != null) {
       _interstitialAd!.show();
-      // O reload acontece automaticamente no callback 'onAdDismissedFullScreenContent'
     }
-
     _playSound('cash.wav');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: levelColor,
         behavior: SnackBarBehavior.floating,
-        content: Text(
-          "LEVEL UP! NÍVEL $currentLevel!",
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
+        content: Text("LEVEL UP! VOCÊ ESTÁ BRILHANDO!", 
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
       ),
     );
   }
@@ -140,15 +149,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (!kIsWeb) Vibration.vibrate(duration: 20);
   }
 
-  void _playSound(String file) =>
-      _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
+  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
 
   void _handleSwipe(Offset localPos, Size gridSize) {
-    double cellWidth = gridSize.width / _columns;
-    double cellHeight = gridSize.height / _rows;
+    double activeWidth = gridSize.width - (_gridPadding * 2);
+    double activeHeight = gridSize.height - (_gridPadding * 2);
+    double dx = localPos.dx - _gridPadding;
+    double dy = localPos.dy - _gridPadding;
 
-    int col = (localPos.dx / cellWidth).floor();
-    int row = (localPos.dy / cellHeight).floor();
+    if (dx < 0 || dy < 0 || dx > activeWidth || dy > activeHeight) return;
+
+    double cellWidth = activeWidth / _columns;
+    double cellHeight = activeHeight / _rows;
+
+    int col = (dx / cellWidth).floor();
+    int row = (dy / cellHeight).floor();
 
     if (col >= 0 && col < _columns && row >= 0 && row < _rows) {
       int index = row * _columns + col;
@@ -182,9 +197,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _initBannerAd() {
     _bannerAd = BannerAd(
-      // ID TESTE BANNER: ca-app-pub-3940256099942544/6300978111
-      // ID PRODUÇÃO BANNER: ca-app-pub-1206696143040453/1307826041
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111', 
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
@@ -196,28 +209,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _loadInterstitialAd() {
     InterstitialAd.load(
-      // ID TESTE INTERSTITIAL: ca-app-pub-3940256099942544/1033173712
-      // ID PRODUÇÃO INTERSTITIAL: ca-app-pub-1206696143040453/9824210936
       adUnitId: 'ca-app-pub-3940256099942544/1033173712',
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
-          _interstitialAd!.fullScreenContentCallback =
-              FullScreenContentCallback(
-                onAdDismissedFullScreenContent: (ad) {
-                  ad.dispose();
-                  _loadInterstitialAd(); // Carrega o próximo imediatamente
-                },
-                onAdFailedToShowFullScreenContent: (ad, error) {
-                  ad.dispose();
-                  _loadInterstitialAd();
-                },
-              );
+          _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _loadInterstitialAd();
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _loadInterstitialAd();
+            },
+          );
         },
-        onAdFailedToLoad: (LoadAdError error) {
-          debugPrint('InterstitialAd failed to load: $error');
-        },
+        onAdFailedToLoad: (LoadAdError error) => debugPrint('InterstitialAd failed: $error'),
       ),
     );
   }
@@ -244,51 +252,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 borderRadius: BorderRadius.circular(6),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "LVL $currentLevel",
-                          style: TextStyle(
-                            fontSize: 22,
-                            color: levelColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          "\$${money.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                            height: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text(
-                          "AUTO RATE",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        Text(
-                          "+\$${autoClickRate.toStringAsFixed(0)}/s",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: levelColor,
-                          ),
-                        ),
-                      ],
-                    ),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text("LVL $currentLevel", style: TextStyle(fontSize: 22, color: levelColor, fontWeight: FontWeight.bold)),
+                      Text(nextGoalText, style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                      // DINHEIRO FORMATADO E BONITO
+                      Text("\$${formatMoney(money)}", 
+                        style: TextStyle(
+                          fontSize: 48, 
+                          fontWeight: FontWeight.w900, 
+                          height: 1,
+                          color: Colors.blueGrey.shade900, // Cor Premium
+                          shadows: [
+                            Shadow(color: Colors.white, offset: Offset(2, 2), blurRadius: 0)
+                          ]
+                        )
+                      ),
+                    ]),
+                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      const Text("AUTO RATE", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text("+\$${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: levelColor)),
+                    ]),
                   ],
                 ),
               ),
@@ -296,43 +283,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return GestureDetector(
-                      onPanUpdate: (d) =>
-                          _handleSwipe(d.localPosition, constraints.biggest),
-                      onPanDown: (d) =>
-                          _handleSwipe(d.localPosition, constraints.biggest),
+                      onPanUpdate: (d) => _handleSwipe(d.localPosition, constraints.biggest),
+                      onPanDown: (d) => _handleSwipe(d.localPosition, constraints.biggest),
                       child: GridView.builder(
-                        padding: const EdgeInsets.all(15),
+                        padding: EdgeInsets.all(_gridPadding),
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 5,
-                              mainAxisSpacing: 8,
-                              crossAxisSpacing: 8,
-                            ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: _columns, 
+                          mainAxisSpacing: 8, 
+                          crossAxisSpacing: 8,
+                        ),
                         itemCount: _totalBubbles,
                         itemBuilder: (context, index) => BubbleWidget(
-                          key: _bubbleKeys[index],
+                          key: _bubbleKeys[index], 
                           onPop: _onPop,
                           activeColor: levelColor,
                         ),
                       ),
                     );
-                  },
+                  }
                 ),
               ),
               Container(
                 height: 50,
                 width: double.infinity,
-                color: _isBannerAdLoaded
-                    ? Colors.transparent
-                    : Colors.grey.withValues(alpha: 0.1),
+                color: _isBannerAdLoaded ? Colors.transparent : Colors.grey.withValues(alpha: 0.1),
                 alignment: Alignment.center,
                 child: _isBannerAdLoaded
                     ? AdWidget(ad: _bannerAd!)
-                    : const Text(
-                        "ESPAÇO DO ANÚNCIO (Carregando...)",
-                        style: TextStyle(fontSize: 10, color: Colors.grey),
-                      ),
+                    : const Text("ESPAÇO DO ANÚNCIO", style: TextStyle(fontSize: 10, color: Colors.grey)),
               ),
               _buildStore(),
             ],
@@ -349,130 +328,92 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15)],
       ),
       child: Column(
         children: [
-          // Linha dos Upgrades Normais
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: _UpgradeCard(
-                    title: "CLICK POWER",
-                    level: levelClick,
-                    cost: costClickUpgrade,
-                    icon: Icons.touch_app,
-                    canBuy: money >= costClickUpgrade,
-                    onTap: () {
-                      if (money >= costClickUpgrade) {
-                        _playSound('cash.wav');
-                        setState(() {
-                          money -= costClickUpgrade;
-                          levelClick++;
-                          clickValue++;
-                          costClickUpgrade *= 1.5;
-                        });
-                      }
-                    },
-                  ),
-                ),
+                Expanded(child: _UpgradeCard(
+                  title: "CLICK POWER", level: levelClick, cost: costClickUpgrade, 
+                  icon: Icons.touch_app, canBuy: money >= costClickUpgrade, 
+                  // Função Formatada no Botão
+                  formatCost: formatMoney,
+                  onTap: () {
+                    if (money >= costClickUpgrade) {
+                      _playSound('cash.wav');
+                      setState(() {
+                        money -= costClickUpgrade;
+                        levelClick++;
+                        clickValue++;
+                        costClickUpgrade *= 1.5;
+                      });
+                    }
+                  },
+                )),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: _UpgradeCard(
-                    title: "AUTO BOT",
-                    level: levelAuto,
-                    cost: costAutoUpgrade,
-                    icon: Icons.smart_toy,
-                    canBuy: money >= costAutoUpgrade,
-                    onTap: () {
-                      if (money >= costAutoUpgrade) {
-                        _playSound('cash.wav');
-                        setState(() {
-                          money -= costAutoUpgrade;
-                          levelAuto++;
-                          autoClickRate += 2;
-                          costAutoUpgrade *= 1.5;
-                        });
-                      }
-                    },
-                  ),
-                ),
+                Expanded(child: _UpgradeCard(
+                  title: "AUTO BOT", level: levelAuto, cost: costAutoUpgrade, 
+                  icon: Icons.smart_toy, canBuy: money >= costAutoUpgrade,
+                  formatCost: formatMoney,
+                  onTap: () {
+                    if (money >= costAutoUpgrade) {
+                      _playSound('cash.wav');
+                      setState(() {
+                        money -= costAutoUpgrade;
+                        levelAuto++;
+                        autoClickRate += 2;
+                        costAutoUpgrade *= 1.5;
+                      });
+                    }
+                  },
+                )),
               ],
             ),
           ),
           const SizedBox(height: 10),
-          // Botão "NO ADS" com visual de PROMOÇÃO
           SizedBox(
             width: double.infinity,
-            height: 50, // Um pouco mais alto para caber o texto
+            height: 50,
             child: ElevatedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Promoção de lançamento em breve!"),
-                  ),
+                  const SnackBar(content: Text("Promoção de lançamento em breve!")),
                 );
               },
-              icon: const Icon(
-                Icons.stars_rounded,
-                color: Colors.yellowAccent,
-                size: 28,
-              ), // Ícone de estrela chama mais atenção
-              // Trocamos o Text simples por uma Row para estilizar preços
+              icon: const Icon(Icons.stars_rounded, color: Colors.yellowAccent, size: 28),
               label: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "NO ADS! ",
+                  const Text("NO ADS! ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text("De U\$ 5,99 ", 
                     style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  // Preço Antigo (Riscado)
-                  Text(
-                    "De U\$ 5,99 ",
-                    style: TextStyle(
-                      color: Colors.white.withValues(
-                        alpha: 0.7,
-                      ), // Um pouco transparente
+                      color: Colors.white.withValues(alpha: 0.7), 
                       fontSize: 12,
-                      decoration: TextDecoration.lineThrough, // O risco no meio
+                      decoration: TextDecoration.lineThrough,
                       decorationColor: Colors.white70,
-                      decorationThickness: 2.0,
-                    ),
+                      decorationThickness: 2.0
+                    )
                   ),
-                  // Preço Novo (Em destaque)
-                  const Text(
-                    " POR U\$ 2,79!",
+                  const Text(" POR U\$ 2,79!", 
                     style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900, // Extra negrito
-                      fontSize: 18, // Maior
-                      fontStyle: FontStyle.italic, // Itálico para dar dinamismo
-                    ),
+                      color: Colors.white, 
+                      fontWeight: FontWeight.w900, 
+                      fontSize: 18, 
+                      fontStyle: FontStyle.italic
+                    )
                   ),
                 ],
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors
-                    .redAccent
-                    .shade400, // Vermelho um pouco mais vibrante
+                backgroundColor: Colors.redAccent.shade400,
                 elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               ),
             ),
-          ),
+          )
         ],
       ),
     );
@@ -490,27 +431,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 class BubbleWidget extends StatefulWidget {
   final VoidCallback onPop;
   final Color activeColor;
-  const BubbleWidget({
-    super.key,
-    required this.onPop,
-    required this.activeColor,
-  });
+  const BubbleWidget({super.key, required this.onPop, required this.activeColor});
   @override
   State<BubbleWidget> createState() => _BubbleWidgetState();
 }
 
-class _BubbleWidgetState extends State<BubbleWidget>
-    with SingleTickerProviderStateMixin {
+class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-    );
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
   }
 
   void pop() {
@@ -530,36 +463,23 @@ class _BubbleWidgetState extends State<BubbleWidget>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(100),
         child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: isPopped ? 0 : 4,
-            sigmaY: isPopped ? 0 : 4,
-          ),
+          filter: ImageFilter.blur(sigmaX: isPopped ? 0 : 4, sigmaY: isPopped ? 0 : 4),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              // CORRIGIDO AQUI: USANDO withValues()
-              color: isPopped
-                  ? Colors.black.withValues(alpha: 0.05)
-                  : widget.activeColor.withValues(alpha: 0.25),
-              border: Border.all(
-                color: isPopped
-                    ? Colors.black12
-                    : Colors.white.withValues(alpha: 0.5),
-                width: 2,
+              color: isPopped ? Colors.black.withValues(alpha: 0.05) : widget.activeColor.withValues(alpha: 0.25),
+              border: Border.all(color: isPopped ? Colors.black12 : Colors.white.withValues(alpha: 0.5), width: 2),
+            ),
+            child: isPopped ? null : Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  center: Alignment(-0.3, -0.4),
+                  colors: [Colors.white70, Colors.transparent],
+                ),
               ),
             ),
-            child: isPopped
-                ? null
-                : Container(
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        center: Alignment(-0.3, -0.4),
-                        colors: [Colors.white70, Colors.transparent],
-                      ),
-                    ),
-                  ),
           ),
         ),
       ),
@@ -580,14 +500,12 @@ class _UpgradeCard extends StatelessWidget {
   final IconData icon;
   final bool canBuy;
   final VoidCallback onTap;
+  final String Function(double) formatCost; // Recebe a função de formatar
 
   const _UpgradeCard({
-    required this.title,
-    required this.level,
-    required this.cost,
-    required this.icon,
-    required this.canBuy,
-    required this.onTap,
+    required this.title, required this.level, required this.cost, 
+    required this.icon, required this.canBuy, required this.onTap,
+    required this.formatCost, // Obrigatório agora
   });
 
   @override
@@ -598,48 +516,27 @@ class _UpgradeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          // CORRIGIDO AQUI
           color: canBuy ? Colors.white : Colors.black.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: canBuy ? Colors.blueAccent : Colors.transparent,
-            width: 2,
-          ),
+          border: Border.all(color: canBuy ? Colors.blueAccent : Colors.transparent, width: 2),
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: canBuy ? Colors.blueAccent : Colors.grey,
-              size: 28,
-            ),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            Text(
-              "LVL $level",
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
+            Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 28),
+            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            Text("LVL $level", style: const TextStyle(fontSize: 11, color: Colors.grey)),
             const Spacer(),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
-                color: canBuy ? Colors.greenAccent : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(10),
+                color: canBuy ? Colors.greenAccent : Colors.grey.shade300, 
+                borderRadius: BorderRadius.circular(10)
               ),
-              child: Text(
-                "\$${cost.toStringAsFixed(0)}",
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-            ),
+              child: Text("\$${formatCost(cost)}", // USA O FORMATADOR AQUI
+                textAlign: TextAlign.center, 
+                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 15)),
+            )
           ],
         ),
       ),

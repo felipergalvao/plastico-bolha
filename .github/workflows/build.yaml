@@ -1,0 +1,48 @@
+name: Construir APK
+
+on:
+  push:
+    branches: [ "master", "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configurar Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0' # Ou a versão que você usa
+          channel: 'stable'
+
+      - name: Baixar Dependências
+        run: flutter pub get
+
+      - name: Gerar Ícones (Garante que o ícone novo vai)
+        run: dart run flutter_launcher_icons
+
+      - name: Construir APK
+        run: flutter build apk --release
+
+      - name: Construir Bundle (AAB)
+        run: flutter build appbundle --release
+
+      - name: Upload do APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload do Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-bundle
+          path: build/app/outputs/bundle/release/app-release.aab
