@@ -1,4 +1,4 @@
-name: Construir APK Rápido
+name: Construir APK Auto-Versionado
 on:
   push:
     branches: [ "master", "main" ]
@@ -18,16 +18,20 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true # ATIVANDO O CACHE AQUI
+          cache: true
 
       - name: Baixar Dependências
         run: flutter pub get
 
-      - name: Construir APK (Release)
-        run: flutter build apk --release
+      - name: Gerar Ícones (Garante que o icone novo vai)
+        run: dart run flutter_launcher_icons
+
+      # AQUI ESTÁ A MÁGICA DA AUTOMAÇÃO:
+      - name: Construir APK (Com Versão Automática)
+        run: flutter build apk --release --build-number=${{ github.run_number }}
 
       - name: Upload do APK
         uses: actions/upload-artifact@v4
         with:
-          name: bubble-tycoon-apk
+          name: bubble-tycoon-v${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
