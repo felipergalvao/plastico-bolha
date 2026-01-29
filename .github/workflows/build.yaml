@@ -1,47 +1,33 @@
-name: Construir APK
-
+name: Construir APK Rápido
 on:
   push:
     branches: [ "master", "main" ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v4
+      
       - name: Configurar Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-
+          
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true # ATIVANDO O CACHE AQUI
 
       - name: Baixar Dependências
         run: flutter pub get
 
-      - name: Gerar Ícones (Garante que o ícone novo vai)
-        run: dart run flutter_launcher_icons
-
-      - name: Construir APK
+      - name: Construir APK (Release)
         run: flutter build apk --release
-
-      - name: Construir Bundle (AAB)
-        run: flutter build appbundle --release
 
       - name: Upload do APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
+          name: bubble-tycoon-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Upload do Bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-bundle
-          path: build/app/outputs/bundle/release/app-release.aab
