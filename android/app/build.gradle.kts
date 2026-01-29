@@ -5,6 +5,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
+val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
+val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
+
 android {
     namespace = "com.galvaoapps.bubbletycoon"
     compileSdk = flutter.compileSdkVersion
@@ -26,7 +38,7 @@ android {
         // Note os parênteses () no lugar de espaço
         minSdkVersion(21)
         targetSdkVersion(flutter.targetSdkVersion)
-        versionCode = flutterVersionCode.toInteger()
+        versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
     }
 
