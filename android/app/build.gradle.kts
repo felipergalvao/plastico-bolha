@@ -36,7 +36,7 @@ android {
         applicationId = "com.galvaoapps.bubbletycoon"
         
         // Note os parênteses () no lugar de espaço
-        minSdkVersion(23)
+        minSdkVersion(24)
         targetSdkVersion(flutter.targetSdkVersion)
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
