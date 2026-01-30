@@ -1,6 +1,6 @@
 ﻿import 'dart:async';
 import 'dart:math';
-import 'dart:ui';
+import 'dart:ui'; // Necessário para lerp e filters
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -79,7 +79,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   final int _columns = 5;
   final int _rows = 6; 
   late int _totalBubbles;
-  // LAYOUT FIX: Reduzi o padding para as bolhas caberem melhor
   final double _gridPadding = 8.0; 
   
   late List<GlobalKey<BubbleWidgetState>> _bubbleKeys;
@@ -112,7 +111,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
     _sfxPlayer.setReleaseMode(ReleaseMode.stop);
     
-    _loadProgress(); 
+    // Carregamento inicial (apenas uma vez)
+    _initGameData(); 
 
     Future.delayed(const Duration(seconds: 2), () {
       if (totalEarnings == 0) {
@@ -134,14 +134,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
+  // --- CORREÇÃO DO BUG DE RESET ---
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _autoClickTimer?.cancel();
-      _saveProgress();
+      _saveProgress(); // Salva ao sair
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
-      _loadProgress();
+      // IMPORTANTE: NÃO recarregamos tudo do disco aqui.
+      // Apenas verificamos o tempo offline para dar dinheiro.
+      _checkOfflineEarningsOnResume(); 
     }
   }
 
@@ -205,6 +208,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _onLevelUp() {
+    // Salva antes de mostrar AD para garantir
+    _saveProgress();
+    
     if (!_isNoAdsPurchased && _interstitialAd != null) {
       _interstitialAd!.show();
       _loadInterstitialAd();
@@ -214,11 +220,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _showTip("LEVEL UP! Nível ${currentLevel} alcançado!", isImportant: true);
   }
 
-  // BUG FIX: O som e vibração estavam desconectados no swipe
   void _onPop() {
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
-    if (!kIsWeb) Vibration.vibrate(duration: 15); // Vibração curta e seca
+    if (!kIsWeb) Vibration.vibrate(duration: 15);
   }
 
   void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.6);
@@ -243,7 +248,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  // --- RADAR DE TOQUE (SWIPE CORRIGIDO) ---
   void _handleInput(PointerEvent details) {
     final RenderBox? box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
@@ -254,10 +258,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         final Offset localPos = bubbleBox.globalToLocal(details.position);
         
         if (bubbleBox.size.contains(localPos)) {
-          // CRITICAL FIX: Verifica se já está estourada para não contar 2x
           if (key.currentState != null && !key.currentState!.isPopped) {
-            key.currentState!.pop(); // Visual
-            _onPop(); // Lógica (Dinheiro + Som + Vibração)
+            key.currentState!.pop();
+            _onPop(); 
           }
           break; 
         }
@@ -265,7 +268,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- EFEITO CHUVA DE MOEDAS ---
   void _triggerCoinRain() {
     setState(() {
       _isRaining = true;
@@ -276,7 +278,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   // --- Ganhos Offline ---
-  void _checkOfflineEarnings(int lastSeenTime) {
+  // Função exclusiva para rodar no RESUME, sem sobrescrever variaveis
+  Future<void> _checkOfflineEarningsOnResume() async {
+    final prefs = await SharedPreferences.getInstance();
+    int? lastSeen = prefs.getInt('last_seen');
+    if (lastSeen != null) {
+      _calculateAndShowOfflineEarnings(lastSeen);
+    }
+  }
+
+  void _calculateAndShowOfflineEarnings(int lastSeenTime) {
     int currentTime = DateTime.now().millisecondsSinceEpoch;
     int secondsPassed = ((currentTime - lastSeenTime) / 1000).floor();
 
@@ -339,7 +350,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     await prefs.setInt('last_seen', DateTime.now().millisecondsSinceEpoch);
   }
 
-  Future<void> _loadProgress() async {
+  // Carregamento INICIAL (Cold Start)
+  Future<void> _initGameData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       money = prefs.getDouble('money') ?? 0;
@@ -362,9 +374,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _loadRewardedAd();
     }
 
+    // Checa offline logo ao abrir
     int? lastSeen = prefs.getInt('last_seen');
     if (lastSeen != null) {
-      Future.delayed(Duration(seconds: 1), () => _checkOfflineEarnings(lastSeen));
+      Future.delayed(Duration(seconds: 1), () => _calculateAndShowOfflineEarnings(lastSeen));
     }
   }
 
@@ -454,12 +467,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: !_isNoAdsPurchased ? FloatingActionButton.extended(
-        onPressed: _showRewardedAd,
-        backgroundColor: _isRewardedAdReady ? Colors.pinkAccent : Colors.grey,
-        icon: Icon(_isRewardedAdReady ? Icons.play_circle_filled : Icons.hourglass_empty, color: Colors.white),
-        label: Text(_isRewardedAdReady ? "BÔNUS" : "CARREGANDO...", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-      ) : null,
+      // CORREÇÃO: Removido o FloatingActionButton que cobria a loja.
+      // O botão agora faz parte do Header.
       
       body: Stack(
         children: [
@@ -481,11 +490,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     minHeight: 8,
                   ),
                   
+                  // HEADER REFORMULADO (Com botão de Bônus)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ESQUERDA: Nível e Dinheiro
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text("NÍVEL $currentLevel", style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)),
                           Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
@@ -502,15 +514,45 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                             ],
                           ),
                         ]),
+                        
+                        // DIREITA: Auto Bot + Botão Bônus
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                          const Text("AUTO BOT", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                          Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: levelColor)),
+                          // Botão Bônus Pequeno e Elegante
+                          if (!_isNoAdsPurchased)
+                            GestureDetector(
+                              onTap: _showRewardedAd,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: _isRewardedAdReady ? Colors.pinkAccent : Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: _isRewardedAdReady 
+                                    ? [BoxShadow(color: Colors.pinkAccent.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 3))]
+                                    : [],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.play_circle_fill, color: Colors.white, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _isRewardedAdReady ? "BÔNUS" : "...", 
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            
+                          const Text("AUTO BOT", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: levelColor)),
                         ]),
                       ],
                     ),
                   ),
                   
-                  // LISTENER GLOBAL + GRID RESPONSIVA
                   Expanded(
                     child: Listener(
                       onPointerMove: _handleInput,
@@ -519,7 +561,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                         padding: EdgeInsets.symmetric(horizontal: _gridPadding),
                         child: Center( 
                           child: AspectRatio(
-                            // Ajuste fino para não cortar: Colunas / Linhas
                             aspectRatio: _columns / _rows,
                             child: GridView.builder(
                               physics: const NeverScrollableScrollPhysics(),
@@ -541,7 +582,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     ),
                   ),
 
-                  // ESPAÇO DO BANNER FIXO
                   if (!_isNoAdsPurchased)
                     Container(
                       height: 60,
@@ -574,7 +614,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   Widget _buildStore() {
     return Container(
-      // LAYOUT FIX: Reduzi de 220 para 170 para liberar espaço vertical para o jogo
       height: 170, 
       padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
       decoration: BoxDecoration(
@@ -691,7 +730,6 @@ class BubbleWidget extends StatefulWidget {
   State<BubbleWidget> createState() => BubbleWidgetState();
 }
 
-// CORREÇÃO: Tornei a classe pública (sem underline) para o GlobalKey encontrar o estado
 class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
@@ -717,7 +755,6 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
     setState(() => isPopped = true);
     _controller.forward().then((_) => _controller.reverse());
     
-    // Auto-revive
     Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () {
       if (mounted) setState(() => isPopped = false);
     });
