@@ -22,7 +22,7 @@ class BubbleTycoonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bubble Tycoon',
+      title: 'Plástico Bolha Tycoon',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -79,10 +79,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   final int _columns = 5;
   final int _rows = 6; 
   late int _totalBubbles;
-  final double _gridPadding = 12.0;
+  // LAYOUT FIX: Reduzi o padding para as bolhas caberem melhor
+  final double _gridPadding = 8.0; 
   
-  // Chaves globais para o Radar de Toque encontrar as bolhas
-  late List<GlobalKey<_BubbleWidgetState>> _bubbleKeys;
+  late List<GlobalKey<BubbleWidgetState>> _bubbleKeys;
 
   @override
   void initState() {
@@ -108,7 +108,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     });
 
     _totalBubbles = _columns * _rows;
-    _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<_BubbleWidgetState>());
+    _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
 
     _sfxPlayer.setReleaseMode(ReleaseMode.stop);
     
@@ -116,7 +116,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
     Future.delayed(const Duration(seconds: 2), () {
       if (totalEarnings == 0) {
-        _showTip("Bem-vindo! Deslize o dedo para estourar várias!");
+        _showTip("Deslize o dedo para estourar várias bolhas!");
         _hasShownFirstTip = true;
       }
     });
@@ -163,7 +163,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     return value.toStringAsFixed(0);
   }
 
-  // Fórmula Quadrática Estável
   int get currentLevel {
     return 1 + (sqrt(totalEarnings / 100)).floor();
   }
@@ -189,6 +188,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _addMoney(double amount) {
     if (!mounted) return;
     int oldLevel = currentLevel;
+    
     setState(() {
       money += amount;
       totalEarnings += amount;
@@ -214,13 +214,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _showTip("LEVEL UP! Nível ${currentLevel} alcançado!", isImportant: true);
   }
 
+  // BUG FIX: O som e vibração estavam desconectados no swipe
   void _onPop() {
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
-    if (!kIsWeb) Vibration.vibrate(duration: 15);
+    if (!kIsWeb) Vibration.vibrate(duration: 15); // Vibração curta e seca
   }
 
-  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
+  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.6);
 
   void _showTip(String message, {bool isImportant = false}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -243,21 +244,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   // --- RADAR DE TOQUE (SWIPE CORRIGIDO) ---
-  // Essa função verifica onde o dedo está e estoura a bolha certa
   void _handleInput(PointerEvent details) {
     final RenderBox? box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
     
-    // Varre todas as bolhas para ver qual está sob o dedo
     for (var key in _bubbleKeys) {
       if (key.currentContext != null) {
         final RenderBox bubbleBox = key.currentContext!.findRenderObject() as RenderBox;
         final Offset localPos = bubbleBox.globalToLocal(details.position);
         
-        // Se o toque estiver dentro desta bolha
         if (bubbleBox.size.contains(localPos)) {
-          key.currentState?.pop();
-          break; // Já achou, para de procurar
+          // CRITICAL FIX: Verifica se já está estourada para não contar 2x
+          if (key.currentState != null && !key.currentState!.isPopped) {
+            key.currentState!.pop(); // Visual
+            _onPop(); // Lógica (Dinheiro + Som + Vibração)
+          }
+          break; 
         }
       }
     }
@@ -508,16 +510,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     ),
                   ),
                   
-                  // LISTENER GLOBAL: É AQUI QUE A MÁGICA DO SWIPE ACONTECE
+                  // LISTENER GLOBAL + GRID RESPONSIVA
                   Expanded(
                     child: Listener(
-                      // Captura o movimento e o toque inicial
                       onPointerMove: _handleInput,
                       onPointerDown: _handleInput,
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: _gridPadding),
                         child: Center( 
                           child: AspectRatio(
+                            // Ajuste fino para não cortar: Colunas / Linhas
                             aspectRatio: _columns / _rows,
                             child: GridView.builder(
                               physics: const NeverScrollableScrollPhysics(),
@@ -530,7 +532,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                               itemCount: _totalBubbles,
                               itemBuilder: (context, index) => BubbleWidget(
                                 key: _bubbleKeys[index], 
-                                // O onPop agora é chamado externamente, mas mantemos aqui para referência
                                 activeColor: levelColor,
                               ),
                             ),
@@ -540,6 +541,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     ),
                   ),
 
+                  // ESPAÇO DO BANNER FIXO
                   if (!_isNoAdsPurchased)
                     Container(
                       height: 60,
@@ -572,8 +574,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   Widget _buildStore() {
     return Container(
-      height: 220, 
-      padding: const EdgeInsets.fromLTRB(15, 15, 15, 25),
+      // LAYOUT FIX: Reduzi de 220 para 170 para liberar espaço vertical para o jogo
+      height: 170, 
+      padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
@@ -642,31 +645,31 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 child: Stack(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(10),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.block, color: Colors.white, size: 30),
-                          const SizedBox(height: 5),
-                          const Text("NO ADS", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16)),
-                          const SizedBox(height: 5),
-                          Text("USD \$9.99", style: TextStyle(color: Colors.white.withOpacity(0.7), decoration: TextDecoration.lineThrough, fontSize: 12)),
+                          const Icon(Icons.block, color: Colors.white, size: 28),
+                          const SizedBox(height: 2),
+                          const Text("NO ADS", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 14)),
+                          const SizedBox(height: 2),
+                          Text("USD \$9.99", style: TextStyle(color: Colors.white.withOpacity(0.7), decoration: TextDecoration.lineThrough, fontSize: 10)),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
-                            child: const Text("USD \$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                            child: const Text("USD \$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                           )
                         ],
                       ),
                     ),
                     Positioned(
-                      top: 10, right: 10,
+                      top: 5, right: 5,
                       child: Transform.rotate(
                         angle: 0.2,
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(3),
                           decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: const Text("-70%", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          child: const Text("-70%", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     )
@@ -680,16 +683,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 }
 
-// --- WIDGET DA BOLHA SIMPLIFICADO ---
-// Removemos o GestureDetector daqui. Quem controla agora é o pai (Listener).
+// --- WIDGET DA BOLHA ---
 class BubbleWidget extends StatefulWidget {
   final Color activeColor;
   const BubbleWidget({super.key, required this.activeColor});
   @override
-  State<BubbleWidget> createState() => _BubbleWidgetState();
+  State<BubbleWidget> createState() => BubbleWidgetState();
 }
 
-class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
+// CORREÇÃO: Tornei a classe pública (sem underline) para o GlobalKey encontrar o estado
+class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
   double _rotationAngle = 0; 
@@ -709,27 +712,12 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
     });
   }
 
-  // Função chamada externamente pelo _handleInput do GameScreen
   void pop() {
     if (isPopped) return;
     setState(() => isPopped = true);
     _controller.forward().then((_) => _controller.reverse());
     
-    // Chama o evento de som/dinheiro do pai de forma indireta? 
-    // Não, precisamos que o Pai já tenha feito isso. 
-    // O Radar (_handleInput) chama o pop, mas E A GRANA?
-    // Correção: O Radar deve chamar a função de grana.
-    // Melhor: O Radar chama o pop DAQUI, e aqui a gente avisa o pai.
-    // Mas para simplificar e não precisar passar callback de novo:
-    // Vamos fazer o Radar chamar o `_onPop` direto? Não temos acesso fácil.
-    // SOLUÇÃO: O pai chama `key.currentState.pop()` E TAMBÉM `_onPop()`.
-    // ESPERA! O `pop()` aqui é só visual.
-    
-    // Vamos ajustar: O `pop()` daqui só anima. O Pai conta a grana.
-    // Não... o Radar no pai chama:
-    // if (contains) { key.currentState.pop(); _onPop(); }
-    
-    // RESPIRAÇÃO AUTOMÁTICA: As bolhas precisam "reviver".
+    // Auto-revive
     Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () {
       if (mounted) setState(() => isPopped = false);
     });
@@ -737,7 +725,6 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    // Sem GestureDetector. Apenas visual.
     return Transform.rotate(
       angle: _rotationAngle,
       child: ScaleTransition(
@@ -829,9 +816,9 @@ class _UpgradeCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 28),
-              const SizedBox(height: 5),
-              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+              Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 24),
+              const SizedBox(height: 2),
+              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
               Text("Lvl $level", style: const TextStyle(fontSize: 10, color: Colors.grey)),
               const Spacer(),
               Container(
@@ -844,7 +831,7 @@ class _UpgradeCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.monetization_on, color: Colors.white, size: 12),
+                    const Icon(Icons.monetization_on, color: Colors.white, size: 10),
                     const SizedBox(width: 2),
                     Text(formatCost(cost), 
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
