@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
@@ -80,7 +80,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<_BubbleWidgetState>());
-
+    
     _sfxPlayer.setReleaseMode(ReleaseMode.stop);
     _loadProgress(); // Carrega o jogo salvo
     
@@ -152,9 +152,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   String get nextGoalText {
     int lvl = currentLevel;
-    if (lvl < 5) return "Será desbloqueado uma nova cor no nível 5";
-    if (lvl < 10) return "Será desbloqueado uma nova cor no nível 10";
-    if (lvl < 20) return "Será desbloqueado uma nova cor no nível 20";
+    if (lvl < 5) return "Nova cor: Roxo (Lvl 5)";
+    if (lvl < 10) return "Nova cor: Ouro (Lvl 10)";
+    if (lvl < 20) return "Nova cor: Hacker (Lvl 20)";
     return "Você é um Mestre!";
   }
 
@@ -208,7 +208,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
-
+  
   // Sistema de Dicas (Tutorial)
   void _showTip(String message, {bool isImportant = false}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -527,7 +527,7 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
     );
   }
   
-@override
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -597,4 +597,3 @@ class _UpgradeCard extends StatelessWidget {
     );
   }
 }
-
