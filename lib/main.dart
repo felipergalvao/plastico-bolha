@@ -26,7 +26,12 @@ class BubbleTycoonApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        // Fonte divertida e moderna para todo o app
         textTheme: GoogleFonts.fredokaTextTheme(),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.cyan,
+          brightness: Brightness.light,
+        ),
       ),
       home: const GameScreen(),
     );
@@ -41,7 +46,7 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
-  // --- Estado ---
+  // --- Variáveis de Estado do Jogo ---
   double money = 0;
   double totalEarnings = 0;
   int clickValue = 1;
@@ -51,18 +56,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
 
+  // --- Sistema e Recursos ---
   final AudioPlayer _sfxPlayer = AudioPlayer();
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
   InterstitialAd? _interstitialAd;
   Timer? _autoClickTimer;
+  bool _hasShownFirstTip = false; // Controle para o tutorial
 
-  // Grid Config (8 linhas para caber tudo e rolar se precisar)
+  // --- Configuração da Grade ---
+  // Reduzido para 7 linhas para garantir espaço pro Ad
   final int _columns = 5;
-  final int _rows = 8; 
+  final int _rows = 7; 
   late int _totalBubbles;
-  final double _gridPadding = 10.0;
+  final double _gridPadding = 12.0;
   
+  // Chaves para controlar cada bolha individualmente
   late List<GlobalKey<_BubbleWidgetState>> _bubbleKeys;
 
   @override
@@ -73,11 +82,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<_BubbleWidgetState>());
     
     _sfxPlayer.setReleaseMode(ReleaseMode.stop);
-    _loadProgress();
-    _startAutoClicker();
+    _loadProgress(); // Carrega o jogo salvo
     
     _initBannerAd();
     _loadInterstitialAd();
+
+    // Dica inicial após um pequeno delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (totalEarnings == 0) {
+        _showTip("Bem-vindo! Toque nas bolhas para ganhar 'Moedas'!");
+        _hasShownFirstTip = true;
+      }
+    });
   }
 
   @override
@@ -90,6 +106,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  // --- Ciclo de Vida do App (Pausa o Bot quando sai) ---
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -109,35 +126,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  // --- Lógica Matemática e Swipe ---
-
-  // Função crítica: Converte o toque na tela em índice da bolha
-  void _handleSwipe(Offset localPos, Size gridSize) {
-    // Área útil da grid descontando o padding
-    double activeWidth = gridSize.width - (_gridPadding * 2);
-    double activeHeight = gridSize.height - (_gridPadding * 2);
-
-    // Posição relativa dentro da área útil
-    double dx = localPos.dx - _gridPadding;
-    double dy = localPos.dy - _gridPadding;
-
-    // Se saiu da área, ignora
-    if (dx < 0 || dy < 0 || dx > activeWidth || dy > activeHeight) return;
-
-    // Tamanho exato de cada célula
-    double cellWidth = activeWidth / _columns;
-    double cellHeight = activeHeight / _rows;
-
-    int col = (dx / cellWidth).floor();
-    int row = (dy / cellHeight).floor();
-
-    if (col >= 0 && col < _columns && row >= 0 && row < _rows) {
-      int index = row * _columns + col;
-      if (index >= 0 && index < _totalBubbles) {
-        _bubbleKeys[index].currentState?.pop();
-      }
-    }
-  }
+  // --- Lógica do Jogo e Matemática ---
 
   String formatMoney(double value) {
     if (value >= 1000000) return "${(value / 1000000).toStringAsFixed(2)}M"; 
@@ -155,9 +144,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Color get levelColor {
     int lvl = currentLevel;
-    if (lvl >= 20) return const Color(0xFF00FF41); 
-    if (lvl >= 10) return const Color(0xFFFFD700); 
-    if (lvl >= 5) return const Color(0xFFBC13FE);  
+    if (lvl >= 20) return const Color(0xFF00FF41); // Verde Hacker
+    if (lvl >= 10) return const Color(0xFFFFD700); // Ouro
+    if (lvl >= 5) return const Color(0xFFBC13FE);  // Roxo
     return Colors.cyan; 
   }
 
@@ -166,7 +155,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (lvl < 5) return "Nova cor: Roxo (Lvl 5)";
     if (lvl < 10) return "Nova cor: Ouro (Lvl 10)";
     if (lvl < 20) return "Nova cor: Hacker (Lvl 20)";
-    return "Mestre das Bolhas!";
+    return "Você é um Mestre!";
   }
 
   void _addMoney(double amount) {
@@ -175,31 +164,73 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       int oldLevel = currentLevel;
       money += amount;
       totalEarnings += amount;
-      if (currentLevel > oldLevel) _onLevelUp();
+      
+      // Verifica se subiu de nível
+      if (currentLevel > oldLevel) {
+        _onLevelUp();
+      }
+      
+      // Dicas contextuais baseadas no dinheiro
+      if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
+        _showTip("Dica: Use suas 'Moedas' na Loja para melhorar seu poder!");
+        _hasShownFirstTip = true;
+      }
+       if (currentLevel == 4 || currentLevel == 9 || currentLevel == 19) {
+        // Avisa antes de mudar de cor
+        if (currentLevelProgress > 0.8) {
+           _showTip("Quase lá! Nova cor incrível no próximo nível!");
+        }
+      }
     });
   }
 
   void _onLevelUp() {
+    // Tenta mostrar anúncio interstitial ao passar de nível
     if (_interstitialAd != null) {
       _interstitialAd!.show();
       _loadInterstitialAd();
     }
     _playSound('cash.wav');
+    _showTip("LEVEL UP! Nível ${currentLevel} alcançado!", isImportant: true);
+  }
+
+  // Função chamada pela bolha quando é estourada
+  void _onPop() {
+    _addMoney(clickValue.toDouble());
+    _playSound('pop.wav');
+    if (!kIsWeb) Vibration.vibrate(duration: 15);
+    
+    // Dica de deslizar depois de alguns cliques
+    if (totalEarnings > 20 && totalEarnings < 30 && !_hasShownFirstTip) {
+        _showTip("Dica Pro: Arraste o dedo para estourar várias seguidas!");
+        _hasShownFirstTip = true;
+    }
+  }
+
+  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
+  
+  // Sistema de Dicas (Tutorial)
+  void _showTip(String message, {bool isImportant = false}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: levelColor,
-        content: Text("LEVEL UP! ${currentLevel}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+        content: Row(
+          children: [
+            Icon(isImportant ? Icons.stars : Icons.lightbulb, color: Colors.yellowAccent),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+        ),
+        backgroundColor: isImportant ? levelColor : Colors.blueGrey.shade800,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(10),
+        duration: Duration(seconds: isImportant ? 4 : 3),
       ),
     );
   }
 
-  void _onPop() {
-    _addMoney(clickValue.toDouble());
-    _playSound('pop.wav');
-    if (!kIsWeb) Vibration.vibrate(duration: 20);
-  }
-
-  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
+  // --- Persistência (Salvar/Carregar) ---
 
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
@@ -216,6 +247,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       totalEarnings = prefs.getDouble('totalEarnings') ?? 0;
       levelClick = prefs.getInt('levelClick') ?? 1;
       levelAuto = prefs.getInt('levelAuto') ?? 0;
+      
+      // Recalcula custos e força
       clickValue = levelClick;
       autoClickRate = levelAuto * 2.0;
       costClickUpgrade = (50 * pow(1.5, levelClick - 1)).toDouble();
@@ -224,9 +257,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
+  // --- Configuração de Ads ---
+
   void _initBannerAd() {
     _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111', 
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // ID de Teste Google
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
@@ -238,7 +273,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _loadInterstitialAd() {
     InterstitialAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/1033173712',
+      adUnitId: 'ca-app-pub-3940256099942544/1033173712', // ID de Teste Google
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
@@ -273,76 +308,79 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         child: SafeArea(
           child: Column(
             children: [
+              // Barra de Progresso do Nível
               LinearProgressIndicator(
                 value: currentLevelProgress,
                 backgroundColor: Colors.black12,
                 color: levelColor,
-                minHeight: 12,
+                minHeight: 8,
               ),
+              
+              // Cabeçalho de Informações
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text("LVL $currentLevel", style: TextStyle(fontSize: 22, color: levelColor, fontWeight: FontWeight.bold)),
-                      Text(nextGoalText, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                      Text("\$${formatMoney(money)}", 
-                        style: TextStyle(
-                          fontSize: 48, fontWeight: FontWeight.w900, height: 1,
-                          color: Colors.blueGrey.shade900,
-                        )
+                      Text("NÍVEL $currentLevel", style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)),
+                      Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                      Row(
+                        children: [
+                          // Ícone de Moeda para deixar claro
+                          Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 36),
+                          const SizedBox(width: 5),
+                          Text(formatMoney(money), 
+                            style: TextStyle(
+                              fontSize: 42, fontWeight: FontWeight.w900, height: 1,
+                              color: Colors.blueGrey.shade900,
+                            )
+                          ),
+                        ],
                       ),
                     ]),
                     Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      const Text("AUTO BOT", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text("+\$${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: levelColor)),
+                      const Text("AUTO BOT", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: levelColor)),
                     ]),
                   ],
                 ),
               ),
               
-              // --- ÁREA DO JOGO COM SWIPE ---
+              // --- ÁREA DO JOGO (GRID) ---
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    // GestureDetector aqui captura o arrastar do dedo sobre a Grid inteira
-                    return GestureDetector(
-                      onPanUpdate: (details) => _handleSwipe(details.localPosition, constraints.biggest),
-                      onPanDown: (details) => _handleSwipe(details.localPosition, constraints.biggest),
-                      child: GridView.builder(
-                        padding: EdgeInsets.all(_gridPadding),
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: _columns, 
-                          mainAxisSpacing: 8, 
-                          crossAxisSpacing: 8,
-                        ),
-                        itemCount: _totalBubbles,
-                        itemBuilder: (context, index) => BubbleWidget(
-                          key: _bubbleKeys[index], 
-                          onPop: _onPop,
-                          activeColor: levelColor,
-                        ),
-                      ),
-                    );
-                  }
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: _gridPadding),
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(), // Sem scroll
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _columns, 
+                      mainAxisSpacing: _gridPadding, 
+                      crossAxisSpacing: _gridPadding,
+                      childAspectRatio: 1.0, // Bolhas perfeitamente redondas
+                    ),
+                    itemCount: _totalBubbles,
+                    itemBuilder: (context, index) => BubbleWidget(
+                      key: _bubbleKeys[index], 
+                      onPop: _onPop, // Passa a função de ganhar dinheiro
+                      activeColor: levelColor,
+                    ),
+                  ),
                 ),
               ),
 
-              // --- ESPAÇO DO BANNER (FIXO) ---
-              // Sempre ocupa 50px de altura, carregando ou não
+              // --- ESPAÇO DO BANNER (FIXO E SEPARADO) ---
               Container(
-                height: 50,
+                height: 60, // Altura padrão do banner
                 width: double.infinity,
-                color: _isBannerAdLoaded ? Colors.white : Colors.black12,
+                color: Colors.grey.shade200, // Cor de fundo para destacar do jogo
                 alignment: Alignment.center,
                 child: _isBannerAdLoaded
                     ? AdWidget(ad: _bannerAd!)
-                    : const Text("PUBLICIDADE", style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    : const Text("PUBLICIDADE", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
               ),
 
-              // --- LOJA RESTAURADA ---
+              // --- LOJA ---
               _buildStore(),
             ],
           ),
@@ -353,99 +391,62 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Widget _buildStore() {
     return Container(
-      height: 240, // Altura maior para caber o botão No Ads
+      height: 200, 
       padding: const EdgeInsets.fromLTRB(15, 15, 15, 25),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 15)],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: Offset(0, -3))],
       ),
-      child: Column(
+      child: Row(
         children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _UpgradeCard(
-                  title: "CLICK POWER", level: levelClick, cost: costClickUpgrade, 
-                  icon: Icons.touch_app, canBuy: money >= costClickUpgrade, 
-                  formatCost: formatMoney,
-                  onTap: () {
-                    if (money >= costClickUpgrade) {
-                      _playSound('cash.wav');
-                      setState(() {
-                        money -= costClickUpgrade;
-                        levelClick++;
-                        clickValue++;
-                        costClickUpgrade *= 1.5;
-                      });
-                      _saveProgress();
-                    }
-                  },
-                )),
-                const SizedBox(width: 12),
-                Expanded(child: _UpgradeCard(
-                  title: "AUTO BOT", level: levelAuto, cost: costAutoUpgrade, 
-                  icon: Icons.smart_toy, canBuy: money >= costAutoUpgrade,
-                  formatCost: formatMoney,
-                  onTap: () {
-                    if (money >= costAutoUpgrade) {
-                      _playSound('cash.wav');
-                      setState(() {
-                        money -= costAutoUpgrade;
-                        levelAuto++;
-                        autoClickRate += 2;
-                        costAutoUpgrade *= 1.5;
-                        _startAutoClicker();
-                      });
-                      _saveProgress();
-                    }
-                  },
-                )),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Botão NO ADS Restaurado
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Loja em manutenção. Em breve!")),
-                );
-              },
-              icon: const Icon(Icons.stars_rounded, color: Colors.yellowAccent, size: 28),
-              label: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("NO ADS! ", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text("De U\$ 5,99 ", 
-                    style: TextStyle(
-                      color: Colors.white70, 
-                      fontSize: 12,
-                      decoration: TextDecoration.lineThrough,
-                    )
-                  ),
-                  const Text(" POR U\$ 2,79!", 
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)
-                  ),
-                ],
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent.shade400,
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              ),
-            ),
-          )
+          Expanded(child: _UpgradeCard(
+            title: "FORÇA DO CLICK", level: levelClick, cost: costClickUpgrade, 
+            icon: Icons.touch_app_rounded, canBuy: money >= costClickUpgrade, 
+            formatCost: formatMoney,
+            onTap: () {
+              if (money >= costClickUpgrade) {
+                _playSound('cash.wav');
+                setState(() {
+                  money -= costClickUpgrade;
+                  levelClick++;
+                  clickValue++;
+                  costClickUpgrade *= 1.5;
+                });
+                _saveProgress();
+              } else {
+                 _showTip("Moedas insuficientes! Continue estourando!");
+              }
+            },
+          )),
+          const SizedBox(width: 15),
+          Expanded(child: _UpgradeCard(
+            title: "AUTO BOT", level: levelAuto, cost: costAutoUpgrade, 
+            icon: Icons.smart_toy_rounded, canBuy: money >= costAutoUpgrade,
+            formatCost: formatMoney,
+            onTap: () {
+              if (money >= costAutoUpgrade) {
+                _playSound('cash.wav');
+                setState(() {
+                  money -= costAutoUpgrade;
+                  levelAuto++;
+                  autoClickRate += 2;
+                  costAutoUpgrade *= 1.5;
+                  _startAutoClicker();
+                });
+                _saveProgress();
+              } else {
+                _showTip("Precisa de mais moedas para o Robô!");
+              }
+            },
+          )),
         ],
       ),
     );
   }
 }
 
+// --- WIDGET DA BOLHA (Com Detector de Toque Próprio) ---
 class BubbleWidget extends StatefulWidget {
   final VoidCallback onPop;
   final Color activeColor;
@@ -461,43 +462,71 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 80));
   }
 
   void pop() {
     if (isPopped) return;
     setState(() => isPopped = true);
     _controller.forward().then((_) => _controller.reverse());
-    widget.onPop();
-    Future.delayed(Duration(milliseconds: 2000 + Random().nextInt(2500)), () {
+    widget.onPop(); // Ganha o dinheiro
+    
+    // Respawn aleatório (1.5s a 3.5s)
+    Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () {
       if (mounted) setState(() => isPopped = false);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: Tween(begin: 1.0, end: 0.8).animate(_controller),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isPopped ? Colors.black.withOpacity(0.05) : widget.activeColor.withOpacity(0.25),
-          border: Border.all(color: isPopped ? Colors.transparent : Colors.white.withOpacity(0.5), width: 2),
-        ),
-        child: isPopped ? null : Container(
-          decoration: const BoxDecoration(
+    // CORREÇÃO DO TOQUE: O GestureDetector é dono da bolha
+    return GestureDetector(
+      onTap: pop, // Clicou na bolha, chama o pop da bolha
+      // Permite arrastar o dedo para estourar várias
+      onPanDown: (_) => pop(),
+      onPanUpdate: (details) {
+        // Verifica se o dedo ainda está dentro da área da bolha
+        RenderBox box = context.findRenderObject() as RenderBox;
+        Offset localPosition = box.globalToLocal(details.globalPosition);
+        if (box.paintBounds.contains(localPosition)) {
+            pop();
+        }
+      },
+      child: ScaleTransition(
+        scale: Tween(begin: 1.0, end: 0.85).animate(_controller),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: RadialGradient(
-              center: Alignment(-0.3, -0.4),
-              colors: [Colors.white70, Colors.transparent],
+            color: isPopped 
+                ? Colors.grey.withOpacity(0.1) 
+                : widget.activeColor.withOpacity(0.3),
+            border: Border.all(
+              color: isPopped ? Colors.transparent : widget.activeColor, 
+              width: 2
+            ),
+            boxShadow: isPopped ? [] : [
+              BoxShadow(
+                color: widget.activeColor.withOpacity(0.2),
+                blurRadius: 8,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: isPopped ? null : Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                center: Alignment(-0.3, -0.4),
+                colors: [Colors.white54, Colors.transparent],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
+  
   @override
   void dispose() {
     _controller.dispose();
@@ -505,6 +534,7 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
   }
 }
 
+// --- CARD DA LOJA (Visual Melhorado) ---
 class _UpgradeCard extends StatelessWidget {
   final String title;
   final int level;
@@ -522,34 +552,46 @@ class _UpgradeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: canBuy ? Colors.white : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: canBuy ? Colors.blueAccent : Colors.transparent, width: 2),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 28),
-            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            Text("LVL $level", style: const TextStyle(fontSize: 11, color: Colors.grey)),
-            const Spacer(),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: canBuy ? Colors.greenAccent : Colors.grey.shade300, 
-                borderRadius: BorderRadius.circular(10)
-              ),
-              child: Text("\$${formatCost(cost)}", 
-                textAlign: TextAlign.center, 
-                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 15)),
-            )
-          ],
+    return Material( 
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: canBuy ? Colors.white : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: canBuy ? Colors.blueAccent : Colors.grey.shade300, width: 2),
+            boxShadow: canBuy ? [BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 5, offset: Offset(0, 2))] : [],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 32),
+              const SizedBox(height: 5),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              Text("Nível $level", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              const Spacer(),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: canBuy ? Colors.green : Colors.grey, 
+                  borderRadius: BorderRadius.circular(10)
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.monetization_on, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text(formatCost(cost), 
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
