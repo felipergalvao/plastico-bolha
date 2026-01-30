@@ -31,22 +31,23 @@ jobs:
 
       # Definimos o --build-name para "1.0.X" (onde X é o número do build do GitHub)
       # Definimos o --build-number para X (garante que o Android entenda que é uma versão nova)
-      - name: Construir APK (Release)
-        run: flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }}
+      #- name: Construir APK (Release)
+      #  run: flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }}
 
       # Se quiser gerar o Bundle para a Play Store, descomente a linha abaixo:
-      # - name: Construir App Bundle (AAB)
-      #   run: flutter build appbundle --release --build-number=${{ github.run_number }}
+       - name: Construir App Bundle (AAB)
+         run: flutter build appbundle --release --build-number=${{ github.run_number }}
 
-      - name: Upload do APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: bubble-tycoon-v${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+
+      #- name: Upload do APK
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: bubble-tycoon-v${{ github.run_number }}
+      #    path: build/app/outputs/flutter-apk/app-release.apk
 
       # Se descomentou o bundle acima, descomente aqui também:
-      # - name: Upload do App Bundle
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: bubble-tycoon-bundle-v${{ github.run_number }}
-      #     path: build/app/outputs/bundle/release/app-release.aab
+       - name: Upload do App Bundle
+         uses: actions/upload-artifact@v4
+         with:
+           name: bubble-tycoon-bundle-v${{ github.run_number }}
+           path: build/app/outputs/bundle/release/app-release.aab
