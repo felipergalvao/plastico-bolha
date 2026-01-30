@@ -1,6 +1,6 @@
 ﻿import 'dart:async';
 import 'dart:math';
-import 'dart:ui'; // Necessário para lerp e filters
+// Necessário para lerp e filters
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -217,7 +217,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
     _playSound('cash.wav');
     _triggerCoinRain(); 
-    _showTip("LEVEL UP! Nível ${currentLevel} alcançado!", isImportant: true);
+    _showTip("LEVEL UP! Nível $currentLevel alcançado!", isImportant: true);
   }
 
   void _onPop() {

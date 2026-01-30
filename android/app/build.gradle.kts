@@ -8,6 +8,11 @@ plugins {
 import java.util.Properties
 import java.io.FileInputStream
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
@@ -40,14 +45,24 @@ android {
         targetSdkVersion(flutter.targetSdkVersion)
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
+        
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = "upload"
+            keyPassword = "Pietro&Lorenzo93" 
+            storeFile = file("upload-keystore.jks")
+            storePassword = "Pietro&Lorenzo93"
+        }
+    }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            // ... (suas configs de minify, etc)
+            
+            // A ÚNICA LINHA QUE DEVE FICAR É ESTA:
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
