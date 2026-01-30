@@ -1,6 +1,6 @@
 ﻿import 'dart:async';
 import 'dart:math';
-import 'dart:ui'; // Necessário para ler pixels se fosse avançado, mas aqui usamos para lerp
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -55,7 +55,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
   
-  // Variável VIP (IAP)
   bool _isNoAdsPurchased = false; 
 
   // --- Sistema e Recursos ---
@@ -71,17 +70,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   Timer? _autoClickTimer;
   bool _hasShownFirstTip = false;
 
-  // --- Efeitos Visuais (Chuva de Moedas) ---
+  // --- Efeitos Visuais ---
   late AnimationController _coinRainController;
   List<CoinParticle> _coins = [];
   bool _isRaining = false;
 
   // --- Configuração da Grade ---
   final int _columns = 5;
-  final int _rows = 7; 
+  final int _rows = 6; 
   late int _totalBubbles;
   final double _gridPadding = 12.0;
   
+  // Chaves globais para o Radar de Toque encontrar as bolhas
   late List<GlobalKey<_BubbleWidgetState>> _bubbleKeys;
 
   @override
@@ -89,7 +89,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // Configura controlador da chuva de moedas
     _coinRainController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _coinRainController.addListener(() {
       setState(() {
@@ -113,11 +112,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
     _sfxPlayer.setReleaseMode(ReleaseMode.stop);
     
-    _loadProgress(); // Carrega dados primeiro para saber se tem NoAds
+    _loadProgress(); 
 
     Future.delayed(const Duration(seconds: 2), () {
       if (totalEarnings == 0) {
-        _showTip("Bem-vindo! Toque nas bolhas para ganhar 'Moedas'!");
+        _showTip("Bem-vindo! Deslize o dedo para estourar várias!");
         _hasShownFirstTip = true;
       }
     });
@@ -155,7 +154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- Matemática do Jogo (Ajustada para Infinito) ---
+  // --- Matemática do Jogo ---
 
   String formatMoney(double value) {
     if (value >= 1000000000) return "\$${(value / 1000000000).toStringAsFixed(2)}B";
@@ -164,49 +163,48 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     return value.toStringAsFixed(0);
   }
 
-  // Level Logarítmico
+  // Fórmula Quadrática Estável
   int get currentLevel {
-    if (totalEarnings < 100) return 1;
-    return (log(totalEarnings) / log(1.6)).floor() - 5; 
+    return 1 + (sqrt(totalEarnings / 100)).floor();
   }
 
   double get currentLevelProgress {
-    double xpForCurrent = pow(1.6, currentLevel + 5).toDouble();
-    double xpForNext = pow(1.6, currentLevel + 6).toDouble();
-    double progress = (totalEarnings - xpForCurrent) / (xpForNext - xpForCurrent);
+    int lvl = currentLevel;
+    double xpStart = 100.0 * pow(lvl - 1, 2);
+    double xpEnd = 100.0 * pow(lvl, 2);
+    
+    double progress = (totalEarnings - xpStart) / (xpEnd - xpStart);
     return progress.clamp(0.0, 1.0);
   }
 
-  // SISTEMA DE CORES ETERNO (HSV)
   Color get levelColor {
-    double hue = (180 + (currentLevel * 17)) % 360;
-    return HSVColor.fromAHSV(1.0, hue, 0.8, 0.9).toColor();
+    double hue = (190 + (currentLevel * 15)) % 360;
+    return HSVColor.fromAHSV(1.0, hue, 0.65, 0.95).toColor();
   }
 
   String get nextGoalText {
-    return "Próxima cor em ${(100 - (currentLevelProgress * 100)).toStringAsFixed(0)}%";
+    return "Nível ${currentLevel + 1} em ${(100 - (currentLevelProgress * 100)).toStringAsFixed(0)}%";
   }
 
   void _addMoney(double amount) {
     if (!mounted) return;
+    int oldLevel = currentLevel;
     setState(() {
-      int oldLevel = currentLevel;
       money += amount;
       totalEarnings += amount;
-      
-      if (currentLevel > oldLevel) {
-        _onLevelUp();
-      }
-      
-      if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
-        _showTip("Dica: Vá na Loja e melhore seu clique!");
-        _hasShownFirstTip = true;
-      }
     });
+
+    if (currentLevel > oldLevel) {
+      _onLevelUp();
+    }
+    
+    if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
+      _showTip("Dica: Vá na Loja e melhore seu clique!");
+      _hasShownFirstTip = true;
+    }
   }
 
   void _onLevelUp() {
-    // Só mostra AD se NÃO comprou o NoAds
     if (!_isNoAdsPurchased && _interstitialAd != null) {
       _interstitialAd!.show();
       _loadInterstitialAd();
@@ -220,11 +218,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
     if (!kIsWeb) Vibration.vibrate(duration: 15);
-    
-    if (totalEarnings > 20 && totalEarnings < 30 && !_hasShownFirstTip) {
-        _showTip("Dica Pro: Arraste o dedo para estourar rápido!");
-        _hasShownFirstTip = true;
-    }
   }
 
   void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
@@ -249,6 +242,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
+  // --- RADAR DE TOQUE (SWIPE CORRIGIDO) ---
+  // Essa função verifica onde o dedo está e estoura a bolha certa
+  void _handleInput(PointerEvent details) {
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    
+    // Varre todas as bolhas para ver qual está sob o dedo
+    for (var key in _bubbleKeys) {
+      if (key.currentContext != null) {
+        final RenderBox bubbleBox = key.currentContext!.findRenderObject() as RenderBox;
+        final Offset localPos = bubbleBox.globalToLocal(details.position);
+        
+        // Se o toque estiver dentro desta bolha
+        if (bubbleBox.size.contains(localPos)) {
+          key.currentState?.pop();
+          break; // Já achou, para de procurar
+        }
+      }
+    }
+  }
+
   // --- EFEITO CHUVA DE MOEDAS ---
   void _triggerCoinRain() {
     setState(() {
@@ -259,7 +273,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _coinRainController.forward();
   }
 
-  // --- Sistema de Ganhos Offline ---
+  // --- Ganhos Offline ---
   void _checkOfflineEarnings(int lastSeenTime) {
     int currentTime = DateTime.now().millisecondsSinceEpoch;
     int secondsPassed = ((currentTime - lastSeenTime) / 1000).floor();
@@ -299,47 +313,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- SIMULAÇÃO DE COMPRA IAP ---
-  void _buyNoAds() {
-    // Aqui entraria a lógica real do in_app_purchase
-    // Por enquanto, simulamos o sucesso.
+  void _showComingSoon() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Remover Anúncios?"),
-        content: const Text("Deseja comprar a versão PRO por USD \$2.79?"),
+        title: const Text("Em Breve"),
+        content: const Text("Esta funcionalidade estará disponível assim que o app for aprovado na Play Store!"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _isNoAdsPurchased = true;
-                _bannerAd?.dispose(); // Remove banner imediatamente
-                _bannerAd = null;
-              });
-              _saveProgress();
-              _playSound('cash.wav');
-              _triggerCoinRain();
-              _showTip("Obrigado! Anúncios Removidos!", isImportant: true);
-            }, 
-            child: const Text("COMPRAR AGORA", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Entendi")),
         ],
       )
     );
   }
 
   // --- Persistência ---
-
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('money', money);
     await prefs.setDouble('totalEarnings', totalEarnings);
     await prefs.setInt('levelClick', levelClick);
     await prefs.setInt('levelAuto', levelAuto);
-    await prefs.setBool('no_ads', _isNoAdsPurchased); // Salva status VIP
+    await prefs.setBool('no_ads', _isNoAdsPurchased);
     await prefs.setInt('last_seen', DateTime.now().millisecondsSinceEpoch);
   }
 
@@ -350,7 +344,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       totalEarnings = prefs.getDouble('totalEarnings') ?? 0;
       levelClick = prefs.getInt('levelClick') ?? 1;
       levelAuto = prefs.getInt('levelAuto') ?? 0;
-      _isNoAdsPurchased = prefs.getBool('no_ads') ?? false; // Carrega VIP
+      _isNoAdsPurchased = prefs.getBool('no_ads') ?? false;
       
       clickValue = levelClick;
       autoClickRate = levelAuto * 2.0;
@@ -360,11 +354,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _startAutoClicker();
     });
 
-    // Se não for VIP, carrega ads
     if (!_isNoAdsPurchased) {
       _initBannerAd();
       _loadInterstitialAd();
-      _loadRewardedAd(); // Rewarded a gente mantém pq é opcional e dá dinheiro
+      _loadRewardedAd();
     }
 
     int? lastSeen = prefs.getInt('last_seen');
@@ -374,7 +367,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   // --- Configuração de Ads ---
-
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
     _bannerAd = BannerAd(
@@ -413,9 +405,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _loadRewardedAd() {
-    // Rewarded pode continuar existindo mesmo com NoAds, pois dá bônus?
-    // Estrategicamente sim, mas se for VIP total, removemos. 
-    // Vamos manter pra maximizar lucro, mas o botão some se não tiver carregado.
     RewardedAd.load(
       adUnitId: 'ca-app-pub-3940256099942544/5224354917', 
       request: const AdRequest(),
@@ -434,8 +423,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _showRewardedAd() {
-    if (_rewardedAd == null) {
-      _showTip("Vídeo indisponível. Tente mais tarde.");
+    if (_rewardedAd == null || !_isRewardedAdReady) {
+      _showTip("Carregando anúncio... Tente novamente em 5s.");
       _loadRewardedAd();
       return;
     }
@@ -463,16 +452,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: _isRewardedAdReady ? FloatingActionButton.extended(
+      floatingActionButton: !_isNoAdsPurchased ? FloatingActionButton.extended(
         onPressed: _showRewardedAd,
-        backgroundColor: Colors.pinkAccent,
-        icon: const Icon(Icons.play_circle_filled, color: Colors.white),
-        label: const Text("BÔNUS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: _isRewardedAdReady ? Colors.pinkAccent : Colors.grey,
+        icon: Icon(_isRewardedAdReady ? Icons.play_circle_filled : Icons.hourglass_empty, color: Colors.white),
+        label: Text(_isRewardedAdReady ? "BÔNUS" : "CARREGANDO...", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
       ) : null,
       
       body: Stack(
         children: [
-          // FUNDO E JOGO PRINCIPAL
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -492,7 +480,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                   ),
                   
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -501,11 +489,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                           Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
                           Row(
                             children: [
-                              Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 36),
+                              Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 32),
                               const SizedBox(width: 5),
                               Text(formatMoney(money), 
                                 style: TextStyle(
-                                  fontSize: 42, fontWeight: FontWeight.w900, height: 1,
+                                  fontSize: 36, fontWeight: FontWeight.w900, height: 1,
                                   color: Colors.blueGrey.shade900,
                                 )
                               ),
@@ -514,41 +502,53 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                         ]),
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                           const Text("AUTO BOT", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                          Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: levelColor)),
+                          Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: levelColor)),
                         ]),
                       ],
                     ),
                   ),
                   
+                  // LISTENER GLOBAL: É AQUI QUE A MÁGICA DO SWIPE ACONTECE
                   Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: _gridPadding),
-                      child: GridView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: _columns, 
-                          mainAxisSpacing: _gridPadding, 
-                          crossAxisSpacing: _gridPadding,
-                          childAspectRatio: 1.0,
-                        ),
-                        itemCount: _totalBubbles,
-                        itemBuilder: (context, index) => BubbleWidget(
-                          key: _bubbleKeys[index], 
-                          onPop: _onPop,
-                          activeColor: levelColor,
+                    child: Listener(
+                      // Captura o movimento e o toque inicial
+                      onPointerMove: _handleInput,
+                      onPointerDown: _handleInput,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: _gridPadding),
+                        child: Center( 
+                          child: AspectRatio(
+                            aspectRatio: _columns / _rows,
+                            child: GridView.builder(
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: _columns, 
+                                mainAxisSpacing: _gridPadding, 
+                                crossAxisSpacing: _gridPadding,
+                                childAspectRatio: 1.0,
+                              ),
+                              itemCount: _totalBubbles,
+                              itemBuilder: (context, index) => BubbleWidget(
+                                key: _bubbleKeys[index], 
+                                // O onPop agora é chamado externamente, mas mantemos aqui para referência
+                                activeColor: levelColor,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
 
-                  // ESPAÇO DO BANNER (Só mostra se não for VIP e estiver carregado)
-                  if (!_isNoAdsPurchased && _isBannerAdLoaded && _bannerAd != null)
+                  if (!_isNoAdsPurchased)
                     Container(
                       height: 60,
                       width: double.infinity,
                       color: Colors.grey.shade200,
                       alignment: Alignment.center,
-                      child: AdWidget(ad: _bannerAd!),
+                      child: (_isBannerAdLoaded && _bannerAd != null)
+                          ? AdWidget(ad: _bannerAd!)
+                          : const Text("ESPAÇO PUBLICITÁRIO", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
                     ),
 
                   _buildStore(),
@@ -557,10 +557,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             ),
           ),
 
-          // OVERLAY: CHUVA DE MOEDAS (Acima de tudo)
           if (_isRaining)
             Positioned.fill(
-              child: IgnorePointer( // Deixa o clique passar para o jogo
+              child: IgnorePointer(
                 child: CustomPaint(
                   painter: CoinRainPainter(_coins),
                 ),
@@ -573,14 +572,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   Widget _buildStore() {
     return Container(
-      height: 220, // Aumentei um pouco para caber o IAP bonito
+      height: 220, 
       padding: const EdgeInsets.fromLTRB(15, 15, 15, 25),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: Offset(0, -3))],
       ),
-      child: ListView( // Mudei para ListView horizontal para caber o card de IAP
+      child: ListView( 
         scrollDirection: Axis.horizontal,
         children: [
           SizedBox(
@@ -630,10 +629,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             ),
           ),
           const SizedBox(width: 10),
-          // CARD DE PROMOÇÃO "NO ADS"
           if (!_isNoAdsPurchased)
             GestureDetector(
-              onTap: _buyNoAds,
+              onTap: _showComingSoon,
               child: Container(
                 width: 130,
                 decoration: BoxDecoration(
@@ -652,7 +650,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                           const SizedBox(height: 5),
                           const Text("NO ADS", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16)),
                           const SizedBox(height: 5),
-                          // ANCHOR PRICING
                           Text("USD \$9.99", style: TextStyle(color: Colors.white.withOpacity(0.7), decoration: TextDecoration.lineThrough, fontSize: 12)),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -683,11 +680,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 }
 
-// --- WIDGET DA BOLHA (Com Gradiente Diagonal e Física de Estouro) ---
+// --- WIDGET DA BOLHA SIMPLIFICADO ---
+// Removemos o GestureDetector daqui. Quem controla agora é o pai (Listener).
 class BubbleWidget extends StatefulWidget {
-  final VoidCallback onPop;
   final Color activeColor;
-  const BubbleWidget({super.key, required this.onPop, required this.activeColor});
+  const BubbleWidget({super.key, required this.activeColor});
   @override
   State<BubbleWidget> createState() => _BubbleWidgetState();
 }
@@ -695,19 +692,16 @@ class BubbleWidget extends StatefulWidget {
 class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
-  // Variável para a "tremida"
   double _rotationAngle = 0; 
 
   @override
   void initState() {
     super.initState();
-    // Usei Curves.elasticIn para dar um "snap" satisfatório
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
     _controller.addListener(() {
       setState(() {
-        // Gera um ângulo aleatório durante a animação para simular o "wobble"
         if (_controller.isAnimating) {
-          _rotationAngle = (Random().nextDouble() - 0.5) * 0.2; // Pequena rotação
+          _rotationAngle = (Random().nextDouble() - 0.5) * 0.2; 
         } else {
           _rotationAngle = 0;
         }
@@ -715,12 +709,27 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
     });
   }
 
+  // Função chamada externamente pelo _handleInput do GameScreen
   void pop() {
     if (isPopped) return;
     setState(() => isPopped = true);
     _controller.forward().then((_) => _controller.reverse());
-    widget.onPop(); 
     
+    // Chama o evento de som/dinheiro do pai de forma indireta? 
+    // Não, precisamos que o Pai já tenha feito isso. 
+    // O Radar (_handleInput) chama o pop, mas E A GRANA?
+    // Correção: O Radar deve chamar a função de grana.
+    // Melhor: O Radar chama o pop DAQUI, e aqui a gente avisa o pai.
+    // Mas para simplificar e não precisar passar callback de novo:
+    // Vamos fazer o Radar chamar o `_onPop` direto? Não temos acesso fácil.
+    // SOLUÇÃO: O pai chama `key.currentState.pop()` E TAMBÉM `_onPop()`.
+    // ESPERA! O `pop()` aqui é só visual.
+    
+    // Vamos ajustar: O `pop()` daqui só anima. O Pai conta a grana.
+    // Não... o Radar no pai chama:
+    // if (contains) { key.currentState.pop(); _onPop(); }
+    
+    // RESPIRAÇÃO AUTOMÁTICA: As bolhas precisam "reviver".
     Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () {
       if (mounted) setState(() => isPopped = false);
     });
@@ -728,62 +737,50 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: pop,
-      onPanDown: (_) => pop(),
-      onPanUpdate: (details) {
-        RenderBox box = context.findRenderObject() as RenderBox;
-        Offset localPosition = box.globalToLocal(details.globalPosition);
-        if (box.paintBounds.contains(localPosition)) {
-            pop();
-        }
-      },
-      child: Transform.rotate(
-        angle: _rotationAngle, // Aplica a tremida
-        child: ScaleTransition(
-          // Efeito elástico no scale
-          scale: Tween(begin: 1.0, end: 0.7).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticIn)),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200), // Transição de cor suave
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              // LÓGICA DO GRADIENTE NA DIAGONAL
-              gradient: isPopped 
-                ? null 
-                : LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      widget.activeColor, // Cor pura no canto
-                      widget.activeColor.withOpacity(0.6), // Levemente mais claro
-                      Colors.white.withOpacity(0.4), // Brilho (Highlight)
-                    ],
-                    stops: const [0.0, 0.7, 1.0]
-                  ),
-              color: isPopped ? Colors.grey.withOpacity(0.05) : null, // Se estourado, fica quase invisível
-              border: Border.all(
-                color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.5), 
-                width: 1
-              ),
-              boxShadow: isPopped ? [] : [
-                BoxShadow(
-                  color: widget.activeColor.withOpacity(0.3),
-                  blurRadius: 6,
-                  spreadRadius: 1,
-                  offset: const Offset(2, 2) // Sombra deslocada para profundidade 3D
-                )
-              ],
-            ),
-            child: isPopped ? null : Container(
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                // Um segundo gradiente radial sutil para dar o efeito de "bolha esférica"
-                gradient: RadialGradient(
-                  center: Alignment(-0.3, -0.4), // Ponto de luz deslocado
-                  radius: 0.8,
-                  colors: [Colors.white54, Colors.transparent],
+    // Sem GestureDetector. Apenas visual.
+    return Transform.rotate(
+      angle: _rotationAngle,
+      child: ScaleTransition(
+        scale: Tween(begin: 1.0, end: 0.7).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticIn)),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: isPopped 
+              ? null 
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.9),
+                    widget.activeColor.withOpacity(0.6),
+                    widget.activeColor,
+                  ],
+                  stops: const [0.0, 0.4, 1.0]
                 ),
+            color: isPopped ? Colors.grey.withOpacity(0.05) : null,
+            border: Border.all(
+              color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.3), 
+              width: 1
+            ),
+            boxShadow: isPopped ? [] : [
+              BoxShadow(
+                color: widget.activeColor.withOpacity(0.2),
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(4, 4) 
               ),
+               BoxShadow(
+                color: Colors.white.withOpacity(0.8),
+                blurRadius: 10,
+                spreadRadius: -5,
+                offset: const Offset(-4, -4) 
+              )
+            ],
+          ),
+          child: isPopped ? null : Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
             ),
           ),
         ),
@@ -798,7 +795,7 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
   }
 }
 
-// --- CARD DA LOJA ---
+// --- Componentes visuais ---
 class _UpgradeCard extends StatelessWidget {
   final String title;
   final int level;
@@ -862,7 +859,6 @@ class _UpgradeCard extends StatelessWidget {
   }
 }
 
-// --- CLASSES AUXILIARES PARA A CHUVA DE MOEDAS ---
 class CoinParticle {
   double x = Random().nextDouble() * 400; 
   double y = -50 - Random().nextDouble() * 200; 
@@ -878,7 +874,6 @@ class CoinRainPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
-    
     for (var coin in coins) {
       paint.color = coin.color;
       canvas.save();
@@ -888,7 +883,6 @@ class CoinRainPainter extends CustomPainter {
       canvas.drawCircle(Offset.zero, 12, paint);
       final borderPaint = Paint()..color = Colors.orange.shade900..style = PaintingStyle.stroke..strokeWidth = 2;
       canvas.drawCircle(Offset.zero, 12, borderPaint);
-      
       TextPainter textPainter = TextPainter(
         text: const TextSpan(text: '\$', style: TextStyle(color: Colors.black45, fontSize: 14, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
@@ -898,7 +892,6 @@ class CoinRainPainter extends CustomPainter {
       canvas.restore();
     }
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
