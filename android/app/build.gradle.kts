@@ -5,7 +5,6 @@ plugins {
 }
 
 android {
-    // ✅ AQUI ESTÁ O SEU ID CORRIGIDO
     namespace = "com.galvaoapps.bubbletycoon"
     
     compileSdk = flutter.compileSdkVersion
@@ -25,7 +24,6 @@ android {
     }
 
     defaultConfig {
-        // ✅ AQUI TAMBÉM
         applicationId = "com.galvaoapps.bubbletycoon"
         
         minSdk = flutter.minSdkVersion
@@ -36,27 +34,25 @@ android {
 
     signingConfigs {
         create("release") {
-            // --- SEGURANÇA MIDAS ---
-            // O código abaixo busca as variáveis que o GitHub Actions injeta.
-            // Você NÃO precisa mexer aqui. O robô preenche isso sozinho.
+            // --- SEGURANÇA MIDAS (CORRIGIDA) ---
+            // Renomeei as variáveis (env...) para não confundir o Gradle
             
-            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
-            val keystorePassword = System.getenv("ANDROID_STORE_PASSWORD")
-            val keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-            val keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            val envKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            val envStorePass = System.getenv("ANDROID_STORE_PASSWORD")
+            val envKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+            val envKeyPass = System.getenv("ANDROID_KEY_PASSWORD")
 
             // Lógica de Proteção:
-            if (keystorePath != null && file(keystorePath).exists()) {
+            if (envKeystorePath != null && file(envKeystorePath).exists()) {
                 // Se achou o arquivo (cenário do GitHub), assina o app.
-                storeFile = file(keystorePath)
-                storePassword = keystorePassword
-                keyAlias = keyAlias
-                keyPassword = keyPassword
+                storeFile = file(envKeystorePath)
+                storePassword = envStorePass
+                keyAlias = envKeyAlias
+                keyPassword = envKeyPass
             } else if (System.getenv("CI") != null) { 
                 // Se estiver no GitHub (CI) e não achou a chave: TRAVA TUDO.
                 throw GradleException("❌ ERRO CRÍTICO: Keystore não encontrada! O build de Release no GitHub EXIGE assinatura.")
             }
-            // Se estiver no seu PC (debug), ele passa sem assinar (padrão do Flutter).
         }
     }
 
@@ -64,7 +60,6 @@ android {
         release {
             signingConfig = signingConfigs.getByName("release")
             
-            // Otimizações para deixar o app leve e difícil de clonar
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
