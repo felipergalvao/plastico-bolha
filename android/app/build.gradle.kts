@@ -1,53 +1,76 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-import java.util.Properties
-import java.io.FileInputStream
-
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localProperties.load(FileInputStream(localPropertiesFile))
-}
-
-val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
-val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
-
 android {
+    // ✅ AQUI ESTÁ O SEU ID CORRIGIDO
     namespace = "com.galvaoapps.bubbletycoon"
+    
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "1.8"
     }
 
-        defaultConfig {
-        // Note o sinal de igual (=)
+    sourceSets {
+        getByName("main").java.srcDirs("src/main/kotlin")
+    }
+
+    defaultConfig {
+        // ✅ AQUI TAMBÉM
         applicationId = "com.galvaoapps.bubbletycoon"
         
-        // Note os parênteses () no lugar de espaço
-        minSdkVersion(24)
-        targetSdkVersion(flutter.targetSdkVersion)
-        versionCode = flutterVersionCode.toInt()
-        versionName = flutterVersionName
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            // --- SEGURANÇA MIDAS ---
+            // O código abaixo busca as variáveis que o GitHub Actions injeta.
+            // Você NÃO precisa mexer aqui. O robô preenche isso sozinho.
+            
+            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            val keystorePassword = System.getenv("ANDROID_STORE_PASSWORD")
+            val keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+            val keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+
+            // Lógica de Proteção:
+            if (keystorePath != null && file(keystorePath).exists()) {
+                // Se achou o arquivo (cenário do GitHub), assina o app.
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = keyAlias
+                keyPassword = keyPassword
+            } else if (System.getenv("CI") != null) { 
+                // Se estiver no GitHub (CI) e não achou a chave: TRAVA TUDO.
+                throw GradleException("❌ ERRO CRÍTICO: Keystore não encontrada! O build de Release no GitHub EXIGE assinatura.")
+            }
+            // Se estiver no seu PC (debug), ele passa sem assinar (padrão do Flutter).
+        }
+    }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
+            
+            // Otimizações para deixar o app leve e difícil de clonar
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

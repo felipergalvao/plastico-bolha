@@ -1,12 +1,15 @@
-name: Build Automático (Versão Incremental)
+name: Build Combo (APK + AAB)
+
 on:
   push:
     branches: [ "master", "main" ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
       - uses: actions/checkout@v4
       
@@ -25,29 +28,43 @@ jobs:
       - name: Baixar Dependências
         run: flutter pub get
 
-      - name: Gerar Ícones do App
+      - name: Gerar Ícones
         run: dart run flutter_launcher_icons
 
-      # --- MUDANÇA: BUILD APP BUNDLE (.aab) ---
-      # Comentamos o APK e ativamos o AAB para a Play Store
-      
-      # - name: Construir APK (Release)
-      #   run: flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }}
+      # Decodifica a chave APENAS UMA VEZ para usar nos dois builds
+      - name: Decodificar Keystore
+        env:
+           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+        
+      # --- BUILD 1: APK (Para testar no celular) ---
+      - name: Construir APK (Release)
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+        env:
+          ANDROID_KEYSTORE_PATH: ../app/upload-keystore.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
 
-      - name: Construir App Bundle (AAB)
+      # --- BUILD 2: AAB (Para a Play Store) ---
+      - name: Construir App Bundle (Release)
         run: flutter build appbundle --release --build-number=${{ github.run_number }}
+        env:
+          ANDROID_KEYSTORE_PATH: ../app/upload-keystore.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
 
-      # --- UPLOAD DOS ARTEFATOS ---
-
-      # - name: Upload do APK
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: bubble-tycoon-v${{ github.run_number }}
-      #     path: build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Upload do App Bundle
+      # --- UPLOADS ---
+      - name: Upload do APK
         uses: actions/upload-artifact@v4
         with:
-          name: bubble-tycoon-bundle-v${{ github.run_number }}
-          # Caminho corrigido para o AAB
+          name: apk-v${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload do AAB (Bundle)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-playstore-v${{ github.run_number }}
           path: build/app/outputs/bundle/release/app-release.aab
