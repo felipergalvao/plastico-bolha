@@ -33,6 +33,7 @@ jobs:
 
       # Decodifica a chave APENAS UMA VEZ para usar nos dois builds
       - name: Decodificar Keystore
+        shell: bash
         env:
            KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
