@@ -34,24 +34,22 @@ android {
 
     signingConfigs {
         create("release") {
-            // --- SEGURANÇA MIDAS (CORRIGIDA) ---
-            // Renomeei as variáveis (env...) para não confundir o Gradle
+            // --- CONFIGURAÇÃO MIDAS CORRIGIDA ---
+            // Usa nomes de variáveis diferentes para evitar conflito
             
             val envKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
             val envStorePass = System.getenv("ANDROID_STORE_PASSWORD")
             val envKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
             val envKeyPass = System.getenv("ANDROID_KEY_PASSWORD")
 
-            // Lógica de Proteção:
+            // Lógica de Segurança:
             if (envKeystorePath != null && file(envKeystorePath).exists()) {
-                // Se achou o arquivo (cenário do GitHub), assina o app.
                 storeFile = file(envKeystorePath)
                 storePassword = envStorePass
                 keyAlias = envKeyAlias
                 keyPassword = envKeyPass
             } else if (System.getenv("CI") != null) { 
-                // Se estiver no GitHub (CI) e não achou a chave: TRAVA TUDO.
-                throw GradleException("❌ ERRO CRÍTICO: Keystore não encontrada! O build de Release no GitHub EXIGE assinatura.")
+                throw GradleException("❌ ERRO CRÍTICO: Keystore não encontrada no GitHub Actions!")
             }
         }
     }
