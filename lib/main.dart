@@ -1,6 +1,6 @@
 ﻿import 'dart:async';
 import 'dart:math';
-import 'dart:ui'; // Necessário para ler o idioma do sistema
+import 'dart:ui'; 
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -16,9 +16,9 @@ void main() {
   runApp(const BubbleTycoonApp());
 }
 
-// --- GERENCIADOR DE TRADUÇÃO (INTEGRADO NO SEU LAYOUT) ---
 class TranslationManager {
   static String get languageCode {
+    // Pega o código do idioma (ex: 'pt', 'es', 'en')
     return PlatformDispatcher.instance.locale.languageCode;
   }
 
@@ -101,6 +101,8 @@ class TranslationManager {
   };
 
   static String translate(String key) {
+    // Tenta pegar o idioma exato (ex: 'pt', 'es')
+    // Se não tiver, cai pro inglês
     String lang = _localizedValues.containsKey(languageCode) ? languageCode : 'en';
     return _localizedValues[lang]?[key] ?? key;
   }
@@ -112,8 +114,15 @@ class BubbleTycoonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bubble Tycoon', // Título interno (não aparece pro usuário)
+      title: 'Bubble Tycoon',
       debugShowCheckedModeBanner: false,
+      // --- CORREÇÃO DE IDIOMA ---
+      // Dizemos ao Flutter explicitamente quais idiomas suportamos
+      supportedLocales: const [
+        Locale('en', ''),
+        Locale('pt', ''),
+        Locale('es', ''),
+      ],
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.fredokaTextTheme(),
@@ -135,7 +144,7 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
-  // --- Variáveis de Estado do Jogo ---
+  // --- Variáveis de Estado ---
   double money = 0;
   double totalEarnings = 0;
   int clickValue = 1;
@@ -147,10 +156,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   
   bool _isNoAdsPurchased = false; 
 
-  // --- Sistema e Recursos ---
+  // --- Ads & Audio ---
   final AudioPlayer _sfxPlayer = AudioPlayer();
-  
-  // ADS
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
   InterstitialAd? _interstitialAd;
@@ -165,12 +172,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   List<CoinParticle> _coins = [];
   bool _isRaining = false;
 
-  // --- Configuração da Grade ---
+  // --- Grid ---
   final int _columns = 5;
   final int _rows = 6; 
   late int _totalBubbles;
   final double _gridPadding = 8.0; 
-  
   late List<GlobalKey<BubbleWidgetState>> _bubbleKeys;
 
   @override
@@ -198,12 +204,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
-
     _sfxPlayer.setReleaseMode(ReleaseMode.stop);
     
-    // Carregamento inicial (apenas uma vez)
     _initGameData(); 
 
+    // Dica inicial (com delay para garantir que buildou)
     Future.delayed(const Duration(seconds: 2), () {
       if (totalEarnings == 0) {
         _showTip(TranslationManager.translate('tip_slide'));
@@ -224,14 +229,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
+  // --- DETECTOR DE MUDANÇA DE IDIOMA EM TEMPO REAL ---
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    super.didChangeLocales(locales);
+    // Força a tela a ser redesenhada quando o idioma do celular muda
+    setState(() {});
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _autoClickTimer?.cancel();
-      _saveProgress(); // Salva ao sair
+      _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume(); 
+      // Atualiza idioma ao voltar pro app
+      setState(() {});
     }
   }
 
@@ -244,28 +259,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- Matemática do Jogo (AGORA COM DÓLAR FIXO $) ---
-
   String formatMoney(double value) {
-    // Força o símbolo $ e usa padrão americano (ponto)
     if (value >= 1000000000) return "\$${(value / 1000000000).toStringAsFixed(2)}B";
     if (value >= 1000000) return "\$${(value / 1000000).toStringAsFixed(2)}M"; 
     if (value >= 1000) return "\$${(value / 1000).toStringAsFixed(1)}k";
-    // Correção: Adicionei o $ aqui também para valores pequenos
     return "\$${value.toStringAsFixed(0)}"; 
   }
 
-  int get currentLevel {
-    return 1 + (sqrt(totalEarnings / 100)).floor();
-  }
+  int get currentLevel => 1 + (sqrt(totalEarnings / 100)).floor();
 
   double get currentLevelProgress {
     int lvl = currentLevel;
     double xpStart = 100.0 * pow(lvl - 1, 2);
     double xpEnd = 100.0 * pow(lvl, 2);
-    
-    double progress = (totalEarnings - xpStart) / (xpEnd - xpStart);
-    return progress.clamp(0.0, 1.0);
+    return ((totalEarnings - xpStart) / (xpEnd - xpStart)).clamp(0.0, 1.0);
   }
 
   Color get levelColor {
@@ -283,15 +290,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _addMoney(double amount) {
     if (!mounted) return;
     int oldLevel = currentLevel;
-    
     setState(() {
       money += amount;
       totalEarnings += amount;
     });
 
-    if (currentLevel > oldLevel) {
-      _onLevelUp();
-    }
+    if (currentLevel > oldLevel) _onLevelUp();
     
     if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
       _showTip(TranslationManager.translate('tip_shop'));
@@ -300,16 +304,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _onLevelUp() {
-    // Salva antes de mostrar AD para garantir
     _saveProgress();
-    
     if (!_isNoAdsPurchased && _interstitialAd != null) {
       _interstitialAd!.show();
       _loadInterstitialAd();
     }
     _playSound('cash.wav');
     _triggerCoinRain(); 
-    
     String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
     _showTip(msg, isImportant: true);
   }
@@ -345,12 +346,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _handleInput(PointerEvent details) {
     final RenderBox? box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
-    
     for (var key in _bubbleKeys) {
       if (key.currentContext != null) {
         final RenderBox bubbleBox = key.currentContext!.findRenderObject() as RenderBox;
         final Offset localPos = bubbleBox.globalToLocal(details.position);
-        
         if (bubbleBox.size.contains(localPos)) {
           if (key.currentState != null && !key.currentState!.isPopped) {
             key.currentState!.pop();
@@ -371,13 +370,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _coinRainController.forward();
   }
 
-  // --- Ganhos Offline ---
   Future<void> _checkOfflineEarningsOnResume() async {
     final prefs = await SharedPreferences.getInstance();
     int? lastSeen = prefs.getInt('last_seen');
-    if (lastSeen != null) {
-      _calculateAndShowOfflineEarnings(lastSeen);
-    }
+    if (lastSeen != null) _calculateAndShowOfflineEarnings(lastSeen);
   }
 
   void _calculateAndShowOfflineEarnings(int lastSeenTime) {
@@ -432,7 +428,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  // --- Persistência ---
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('money', money);
@@ -472,7 +467,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- Configuração de Ads ---
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
     _bannerAd = BannerAd(
@@ -578,14 +572,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     minHeight: 8,
                   ),
                   
-                  // HEADER COM TRADUÇÃO
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ESQUERDA: Nível e Dinheiro
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text("${TranslationManager.translate('level')} $currentLevel", 
                             style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)),
@@ -604,7 +596,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                           ),
                         ]),
                         
-                        // DIREITA: Auto Bot + Botão Bônus
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                           if (!_isNoAdsPurchased)
                             GestureDetector(
@@ -759,11 +750,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             ),
           ),
           const SizedBox(width: 10),
+          // --- BLOCO NO ADS MELHORADO ---
           if (!_isNoAdsPurchased)
             GestureDetector(
               onTap: _showComingSoon,
               child: Container(
-                width: 130,
+                width: 145, // Aumentei um pouco a largura
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)], begin: Alignment.topLeft, end: Alignment.bottomRight),
                   borderRadius: BorderRadius.circular(20),
@@ -780,11 +772,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                           const SizedBox(height: 2),
                           Text(TranslationManager.translate('no_ads'), style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 14)),
                           const SizedBox(height: 2),
-                          Text("USD \$9.99", style: TextStyle(color: Colors.white.withOpacity(0.7), decoration: TextDecoration.lineThrough, fontSize: 10)),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
-                            child: const Text("USD \$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          // Preços melhor alinhados
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text("USD 9.99", style: TextStyle(color: Colors.white.withOpacity(0.7), decoration: TextDecoration.lineThrough, fontSize: 10)),
+                              SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
+                                child: const Text("\$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              )
+                            ],
                           )
                         ],
                       ),
@@ -794,9 +793,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                       child: Transform.rotate(
                         angle: 0.2,
                         child: Container(
-                          padding: const EdgeInsets.all(3),
+                          padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: const Text("-70%", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          child: const Text("-70%", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     )
@@ -810,7 +809,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 }
 
-// --- WIDGET DA BOLHA (SEU LAYOUT LINDO MANTIDO 100%) ---
+// --- CLASSE BUBBLE WIDGET E PARTÍCULAS (MANTIDOS IGUAIS) ---
 class BubbleWidget extends StatefulWidget {
   final Color activeColor;
   const BubbleWidget({super.key, required this.activeColor});
@@ -842,7 +841,6 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
     if (isPopped) return;
     setState(() => isPopped = true);
     _controller.forward().then((_) => _controller.reverse());
-    
     Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () {
       if (mounted) setState(() => isPopped = false);
     });
@@ -876,38 +874,19 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
               width: 1
             ),
             boxShadow: isPopped ? [] : [
-              BoxShadow(
-                color: widget.activeColor.withOpacity(0.2),
-                blurRadius: 10,
-                spreadRadius: 0,
-                offset: const Offset(4, 4) 
-              ),
-               BoxShadow(
-                color: Colors.white.withOpacity(0.8),
-                blurRadius: 10,
-                spreadRadius: -5,
-                offset: const Offset(-4, -4) 
-              )
+              BoxShadow(color: widget.activeColor.withOpacity(0.2), blurRadius: 10, offset: const Offset(4, 4)),
+              BoxShadow(color: Colors.white.withOpacity(0.8), blurRadius: 10, offset: const Offset(-4, -4))
             ],
           ),
-          child: isPopped ? null : Container(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-            ),
-          ),
+          child: isPopped ? null : Container(decoration: const BoxDecoration(shape: BoxShape.circle)),
         ),
       ),
     );
   }
-  
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  void dispose() { _controller.dispose(); super.dispose(); }
 }
 
-// --- UPGRADE CARD & RAIN PAINTER (MANTIDOS) ---
 class _UpgradeCard extends StatelessWidget {
   final String title;
   final int level;
@@ -949,17 +928,13 @@ class _UpgradeCard extends StatelessWidget {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: canBuy ? Colors.green : Colors.grey, 
-                  borderRadius: BorderRadius.circular(8)
-                ),
+                decoration: BoxDecoration(color: canBuy ? Colors.green : Colors.grey, borderRadius: BorderRadius.circular(8)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.monetization_on, color: Colors.white, size: 10),
                     const SizedBox(width: 2),
-                    Text(formatCost(cost), 
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    Text(formatCost(cost), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   ],
                 ),
               )
