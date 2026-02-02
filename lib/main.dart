@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'dart:ui';
 
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,14 +11,17 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
   runApp(const BubbleTycoonApp());
 }
 
+
 class BubbleTycoonApp extends StatelessWidget {
   const BubbleTycoonApp({super.key});
+
 
   @override
   Widget build(BuildContext context) {
@@ -38,12 +42,15 @@ class BubbleTycoonApp extends StatelessWidget {
   }
 }
 
+
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
+
 
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
+
 
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   // --- Variáveis de Estado do Jogo ---
@@ -56,6 +63,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
 
+
   // --- Sistema e Recursos ---
   final AudioPlayer _sfxPlayer = AudioPlayer();
   BannerAd? _bannerAd;
@@ -63,6 +71,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   InterstitialAd? _interstitialAd;
   Timer? _autoClickTimer;
   bool _hasShownFirstTip = false; // Controle para o tutorial
+
 
   // --- Configuração da Grade ---
   // Reduzido para 7 linhas para garantir espaço pro Ad
@@ -73,6 +82,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   
   // Chaves para controlar cada bolha individualmente
   late List<GlobalKey<_BubbleWidgetState>> _bubbleKeys;
+
 
   @override
   void initState() {
@@ -87,6 +97,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _initBannerAd();
     _loadInterstitialAd();
 
+
     // Dica inicial após um pequeno delay
     Future.delayed(const Duration(seconds: 2), () {
       if (totalEarnings == 0) {
@@ -95,6 +106,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       }
     });
   }
+
 
   @override
   void dispose() {
@@ -105,6 +117,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _interstitialAd?.dispose();
     super.dispose();
   }
+
 
   // --- Ciclo de Vida do App (Pausa o Bot quando sai) ---
   @override
@@ -117,6 +130,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
+
   void _startAutoClicker() {
     _autoClickTimer?.cancel();
     if (autoClickRate > 0) {
@@ -126,7 +140,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
+
   // --- Lógica do Jogo e Matemática ---
+
 
   String formatMoney(double value) {
     if (value >= 1000000) return "${(value / 1000000).toStringAsFixed(2)}M"; 
@@ -134,13 +150,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return value.toStringAsFixed(0);
   }
 
+
   int get currentLevel => (0.5 + sqrt(0.25 + (totalEarnings / 250))).floor();
+
 
   double get currentLevelProgress {
     double xpInCurrentLevel = totalEarnings - (250.0 * currentLevel * (currentLevel - 1));
     double xpRequired = currentLevel * 500.0;
     return (xpInCurrentLevel / xpRequired).clamp(0.0, 1.0);
   }
+
 
   Color get levelColor {
     int lvl = currentLevel;
@@ -150,6 +169,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return Colors.cyan; 
   }
 
+
   String get nextGoalText {
     int lvl = currentLevel;
     if (lvl < 5) return "Será desbloqueado uma nova cor no nível 5";
@@ -157,6 +177,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (lvl < 20) return "Será desbloqueado uma nova cor no nível 20";
     return "Você é um Mestre!";
   }
+
 
   void _addMoney(double amount) {
     if (!mounted) return;
@@ -184,6 +205,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
+
   void _onLevelUp() {
     // Tenta mostrar anúncio interstitial ao passar de nível
     if (_interstitialAd != null) {
@@ -193,6 +215,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _playSound('cash.wav');
     _showTip("LEVEL UP! Nível ${currentLevel} alcançado!", isImportant: true);
   }
+
 
   // Função chamada pela bolha quando é estourada
   void _onPop() {
@@ -206,6 +229,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _hasShownFirstTip = true;
     }
   }
+
 
   void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
   
@@ -230,7 +254,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
+
   // --- Persistência (Salvar/Carregar) ---
+
 
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
@@ -239,6 +265,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     await prefs.setInt('levelClick', levelClick);
     await prefs.setInt('levelAuto', levelAuto);
   }
+
 
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
@@ -257,7 +284,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
+
   // --- Configuração de Ads ---
+
 
   void _initBannerAd() {
     _bannerAd = BannerAd(
@@ -270,6 +299,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     )..load();
   }
+
 
   void _loadInterstitialAd() {
     InterstitialAd.load(
@@ -293,6 +323,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -369,6 +400,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ),
               ),
 
+
               // --- ESPAÇO DO BANNER (FIXO E SEPARADO) ---
               Container(
                 height: 60, // Altura padrão do banner
@@ -380,6 +412,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     : const Text("PUBLICIDADE", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
               ),
 
+
               // --- LOJA ---
               _buildStore(),
             ],
@@ -388,6 +421,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     );
   }
+
 
   Widget _buildStore() {
     return Container(
@@ -446,6 +480,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 }
 
+
 // --- WIDGET DA BOLHA (Com Detector de Toque Próprio) ---
 class BubbleWidget extends StatefulWidget {
   final VoidCallback onPop;
@@ -455,15 +490,18 @@ class BubbleWidget extends StatefulWidget {
   State<BubbleWidget> createState() => _BubbleWidgetState();
 }
 
+
 class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
+
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 80));
   }
+
 
   void pop() {
     if (isPopped) return;
@@ -476,6 +514,7 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
       if (mounted) setState(() => isPopped = false);
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -534,6 +573,7 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
   }
 }
 
+
 // --- CARD DA LOJA (Visual Melhorado) ---
 class _UpgradeCard extends StatelessWidget {
   final String title;
@@ -544,11 +584,13 @@ class _UpgradeCard extends StatelessWidget {
   final VoidCallback onTap;
   final String Function(double) formatCost;
 
+
   const _UpgradeCard({
     required this.title, required this.level, required this.cost, 
     required this.icon, required this.canBuy, required this.onTap,
     required this.formatCost,
   });
+
 
   @override
   Widget build(BuildContext context) {
