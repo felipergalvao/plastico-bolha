@@ -1,6 +1,6 @@
 ﻿import 'dart:async';
 import 'dart:math';
-import 'dart:ui'; // Para ler o idioma do sistema
+import 'dart:ui'; // Necessário para ler o idioma do sistema
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -16,66 +16,91 @@ void main() {
   runApp(const BubbleTycoonApp());
 }
 
-// --- GERENCIADOR DE TRADUÇÃO (VOLTOU!) ---
+// --- GERENCIADOR DE TRADUÇÃO (INTEGRADO NO SEU LAYOUT) ---
 class TranslationManager {
   static String get languageCode {
-    // Pega o idioma do celular (ex: 'pt', 'en', 'es')
     return PlatformDispatcher.instance.locale.languageCode;
   }
 
   static const Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'app_title': 'Bubble Tycoon',
-      'welcome_tip': 'Welcome! Tap bubbles to earn Dollars!',
-      'tip_shop': 'Tip: Use your Dollars in the Shop to upgrade!',
-      'tip_color': 'Almost there! New amazing color next level!',
-      'tip_combo': 'Pro Tip: Drag your finger to pop many bubbles!',
+      'app_title': 'Bubble Wrap Tycoon',
+      'tip_slide': 'Slide your finger to pop multiple bubbles!',
+      'tip_shop': 'Tip: Go to the Shop and upgrade your click!',
       'level_up': 'LEVEL UP! Level @level reached!',
-      'unlock_5': 'New color unlocks at level 5',
-      'unlock_10': 'New color unlocks at level 10',
-      'unlock_20': 'New color unlocks at level 20',
-      'master': 'You are a Master!',
+      'next_goal': 'Level @next in @percent%',
+      'welcome_back': 'Welcome back!',
+      'offline_work': 'Your Auto Bot worked for @seconds s.',
+      'collect_all': 'COLLECT ALL',
+      'coming_soon_title': 'Coming Soon',
+      'coming_soon_msg': 'This feature will be available once the app is approved on Play Store!',
+      'understood': 'Got it',
+      'loading_ad': 'Loading ad... Try again in 5s.',
+      'reward_title': 'Reward Received!',
+      'reward_msg': 'You earned @amount coins!',
+      'level': 'LEVEL',
       'auto_bot': 'AUTO BOT',
+      'bonus': 'BONUS',
+      'ad_space': 'ADVERTISEMENT SPACE',
       'click_power': 'CLICK POWER',
-      'no_money': 'Not enough Dollars! Keep popping!',
-      'ad_loading': 'ADVERTISEMENT',
+      'no_ads': 'NO ADS',
+      'insufficient_funds': 'Insufficient funds!',
+      'more_coins': 'Collect more coins!',
+      'bonus_loading': '...',
     },
     'pt': {
-      'app_title': 'Bubble Tycoon',
-      'welcome_tip': 'Bem-vindo! Estoure bolhas para ganhar Dólares!',
-      'tip_shop': 'Dica: Use seus Dólares na Loja para melhorar!',
-      'tip_color': 'Quase lá! Nova cor incrível no próximo nível!',
-      'tip_combo': 'Dica Pro: Arraste o dedo para estourar várias!',
-      'level_up': 'SUBIU DE NÍVEL! Nível @level alcançado!',
-      'unlock_5': 'Nova cor desbloqueia no nível 5',
-      'unlock_10': 'Nova cor desbloqueia no nível 10',
-      'unlock_20': 'Nova cor desbloqueia no nível 20',
-      'master': 'Você é um Mestre!',
+      'app_title': 'Plástico Bolha Tycoon',
+      'tip_slide': 'Deslize o dedo para estourar várias bolhas!',
+      'tip_shop': 'Dica: Vá na Loja e melhore seu clique!',
+      'level_up': 'LEVEL UP! Nível @level alcançado!',
+      'next_goal': 'Nível @next em @percent%',
+      'welcome_back': 'Bem-vindo de volta!',
+      'offline_work': 'Seu Auto Bot trabalhou por @seconds s.',
+      'collect_all': 'COLETAR TUDO',
+      'coming_soon_title': 'Em Breve',
+      'coming_soon_msg': 'Esta funcionalidade estará disponível assim que o app for aprovado na Play Store!',
+      'understood': 'Entendi',
+      'loading_ad': 'Carregando anúncio... Tente novamente em 5s.',
+      'reward_title': 'Recompensa Recebida!',
+      'reward_msg': 'Você ganhou @amount moedas!',
+      'level': 'NÍVEL',
       'auto_bot': 'AUTO ROBÔ',
+      'bonus': 'BÔNUS',
+      'ad_space': 'ESPAÇO PUBLICITÁRIO',
       'click_power': 'FORÇA DO CLICK',
-      'no_money': 'Dólares insuficientes! Continue estourando!',
-      'ad_loading': 'PUBLICIDADE',
+      'no_ads': 'SEM ADS',
+      'insufficient_funds': 'Moedas insuficientes!',
+      'more_coins': 'Junte mais moedas!',
+      'bonus_loading': '...',
     },
     'es': {
-      'app_title': 'Bubble Tycoon',
-      'welcome_tip': '¡Bienvenido! ¡Explota burbujas para ganar Dólares!',
-      'tip_shop': 'Consejo: ¡Usa tus Dólares en la Tienda!',
-      'tip_color': '¡Casi allí! ¡Nuevo color increíble pronto!',
-      'tip_combo': 'Pro Tip: ¡Arrastra el dedo para explotar muchas!',
+      'app_title': 'Plástico Burbuja Tycoon',
+      'tip_slide': '¡Desliza el dedo para explotar burbujas!',
+      'tip_shop': 'Consejo: ¡Ve a la Tienda y mejora tu clic!',
       'level_up': '¡NIVEL SUPERADO! ¡Nivel @level alcanzado!',
-      'unlock_5': 'Nuevo color desbloqueado en el nivel 5',
-      'unlock_10': 'Nuevo color desbloqueado en el nivel 10',
-      'unlock_20': 'Nuevo color desbloqueado en el nivel 20',
-      'master': '¡Eres un Maestro!',
+      'next_goal': 'Nivel @next en @percent%',
+      'welcome_back': '¡Bienvenido de nuevo!',
+      'offline_work': 'Tu Auto Bot trabajó por @seconds s.',
+      'collect_all': 'RECOGER TODO',
+      'coming_soon_title': 'Próximamente',
+      'coming_soon_msg': '¡Esta función estará disponible pronto!',
+      'understood': 'Entendido',
+      'loading_ad': 'Cargando anuncio... Intenta en 5s.',
+      'reward_title': '¡Recompensa Recibida!',
+      'reward_msg': '¡Ganaste @amount monedas!',
+      'level': 'NIVEL',
       'auto_bot': 'AUTO BOT',
-      'click_power': 'PODER DE CLICK',
-      'no_money': '¡Dólares insuficientes! ¡Sigue explotando!',
-      'ad_loading': 'PUBLICIDAD',
+      'bonus': 'BONUS',
+      'ad_space': 'ESPACIO PUBLICITARIO',
+      'click_power': 'PODER CLICK',
+      'no_ads': 'NO ADS',
+      'insufficient_funds': '¡Fondos insuficientes!',
+      'more_coins': '¡Consigue más monedas!',
+      'bonus_loading': '...',
     }
   };
 
   static String translate(String key) {
-    // Se não tiver o idioma, usa Inglês (en) como padrão
     String lang = _localizedValues.containsKey(languageCode) ? languageCode : 'en';
     return _localizedValues[lang]?[key] ?? key;
   }
@@ -87,7 +112,7 @@ class BubbleTycoonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bubble Tycoon',
+      title: 'Bubble Tycoon', // Título interno (não aparece pro usuário)
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -109,8 +134,8 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
-  // --- Variáveis de Estado ---
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+  // --- Variáveis de Estado do Jogo ---
   double money = 0;
   double totalEarnings = 0;
   int clickValue = 1;
@@ -119,39 +144,69 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   int levelAuto = 0;
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
+  
+  bool _isNoAdsPurchased = false; 
 
-  // --- Sistema ---
+  // --- Sistema e Recursos ---
   final AudioPlayer _sfxPlayer = AudioPlayer();
+  
+  // ADS
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
   InterstitialAd? _interstitialAd;
+  RewardedAd? _rewardedAd;
+  bool _isRewardedAdReady = false;
+
   Timer? _autoClickTimer;
   bool _hasShownFirstTip = false;
 
-  // --- Grid ---
+  // --- Efeitos Visuais ---
+  late AnimationController _coinRainController;
+  List<CoinParticle> _coins = [];
+  bool _isRaining = false;
+
+  // --- Configuração da Grade ---
   final int _columns = 5;
-  final int _rows = 7; 
+  final int _rows = 6; 
   late int _totalBubbles;
-  final double _gridPadding = 12.0;
-  late List<GlobalKey<_BubbleWidgetState>> _bubbleKeys;
+  final double _gridPadding = 8.0; 
+  
+  late List<GlobalKey<BubbleWidgetState>> _bubbleKeys;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _totalBubbles = _columns * _rows;
-    _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<_BubbleWidgetState>());
     
-    _sfxPlayer.setReleaseMode(ReleaseMode.stop);
-    _loadProgress();
-    
-    _initBannerAd();
-    _loadInterstitialAd();
+    _coinRainController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _coinRainController.addListener(() {
+      setState(() {
+        for (var coin in _coins) {
+          coin.y += coin.speed;
+          coin.rotation += 0.1;
+        }
+      });
+    });
+    _coinRainController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _isRaining = false;
+          _coins.clear();
+        });
+      }
+    });
 
-    // Dica inicial
+    _totalBubbles = _columns * _rows;
+    _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
+
+    _sfxPlayer.setReleaseMode(ReleaseMode.stop);
+    
+    // Carregamento inicial (apenas uma vez)
+    _initGameData(); 
+
     Future.delayed(const Duration(seconds: 2), () {
       if (totalEarnings == 0) {
-        _showTip(TranslationManager.translate('welcome_tip'));
+        _showTip(TranslationManager.translate('tip_slide'));
         _hasShownFirstTip = true;
       }
     });
@@ -161,9 +216,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _autoClickTimer?.cancel();
+    _coinRainController.dispose();
     _sfxPlayer.dispose();
     _bannerAd?.dispose();
     _interstitialAd?.dispose();
+    _rewardedAd?.dispose();
     super.dispose();
   }
 
@@ -171,9 +228,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _autoClickTimer?.cancel();
-      _saveProgress();
+      _saveProgress(); // Salva ao sair
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
+      _checkOfflineEarningsOnResume(); 
     }
   }
 
@@ -186,83 +244,72 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  // --- LÓGICA FINANCEIRA (TRAVADA EM DÓLAR $) ---
+  // --- Matemática do Jogo (AGORA COM DÓLAR FIXO $) ---
+
   String formatMoney(double value) {
-    // Independente do país, sempre usa o símbolo $
-    String suffix = "";
-    double displayValue = value;
-
-    if (value >= 1000000) {
-      displayValue = value / 1000000;
-      suffix = "M";
-    } else if (value >= 1000) {
-      displayValue = value / 1000;
-      suffix = "k";
-    }
-
-    // Retorna fixo com $ na frente. Ex: $ 1.5k
-    if (suffix.isEmpty) {
-      return "\$ ${displayValue.toStringAsFixed(0)}";
-    } else {
-      // Usa . para decimais (padrão americano) ou , dependendo do gosto, 
-      // mas mantendo o $ fixo. Vou deixar padrão US (ponto) pra ficar "Global".
-      return "\$ ${displayValue.toStringAsFixed(1)}$suffix"; 
-    }
+    // Força o símbolo $ e usa padrão americano (ponto)
+    if (value >= 1000000000) return "\$${(value / 1000000000).toStringAsFixed(2)}B";
+    if (value >= 1000000) return "\$${(value / 1000000).toStringAsFixed(2)}M"; 
+    if (value >= 1000) return "\$${(value / 1000).toStringAsFixed(1)}k";
+    // Correção: Adicionei o $ aqui também para valores pequenos
+    return "\$${value.toStringAsFixed(0)}"; 
   }
 
-  int get currentLevel => (0.5 + sqrt(0.25 + (totalEarnings / 250))).floor();
-  
+  int get currentLevel {
+    return 1 + (sqrt(totalEarnings / 100)).floor();
+  }
+
   double get currentLevelProgress {
-    double xpInCurrentLevel = totalEarnings - (250.0 * currentLevel * (currentLevel - 1));
-    double xpRequired = currentLevel * 500.0;
-    return (xpInCurrentLevel / xpRequired).clamp(0.0, 1.0);
+    int lvl = currentLevel;
+    double xpStart = 100.0 * pow(lvl - 1, 2);
+    double xpEnd = 100.0 * pow(lvl, 2);
+    
+    double progress = (totalEarnings - xpStart) / (xpEnd - xpStart);
+    return progress.clamp(0.0, 1.0);
   }
 
   Color get levelColor {
-    int lvl = currentLevel;
-    if (lvl >= 20) return const Color(0xFF00FF41); // Hacker Green
-    if (lvl >= 10) return const Color(0xFFFFD700); // Gold
-    if (lvl >= 5) return const Color(0xFFBC13FE);  // Purple
-    return Colors.cyan;
+    double hue = (190 + (currentLevel * 15)) % 360;
+    return HSVColor.fromAHSV(1.0, hue, 0.65, 0.95).toColor();
   }
 
   String get nextGoalText {
-    int lvl = currentLevel;
-    if (lvl < 5) return TranslationManager.translate('unlock_5');
-    if (lvl < 10) return TranslationManager.translate('unlock_10');
-    if (lvl < 20) return TranslationManager.translate('unlock_20');
-    return TranslationManager.translate('master');
+    String percent = (100 - (currentLevelProgress * 100)).toStringAsFixed(0);
+    return TranslationManager.translate('next_goal')
+        .replaceAll('@next', '${currentLevel + 1}')
+        .replaceAll('@percent', percent);
   }
 
   void _addMoney(double amount) {
     if (!mounted) return;
+    int oldLevel = currentLevel;
+    
     setState(() {
-      int oldLevel = currentLevel;
       money += amount;
       totalEarnings += amount;
-      
-      if (currentLevel > oldLevel) {
-        _onLevelUp();
-      }
-      
-      if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
-        _showTip(TranslationManager.translate('tip_shop'));
-        _hasShownFirstTip = true;
-      }
-       if (currentLevel == 4 || currentLevel == 9 || currentLevel == 19) {
-        if (currentLevelProgress > 0.8) {
-           _showTip(TranslationManager.translate('tip_color'));
-        }
-      }
     });
+
+    if (currentLevel > oldLevel) {
+      _onLevelUp();
+    }
+    
+    if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
+      _showTip(TranslationManager.translate('tip_shop'));
+      _hasShownFirstTip = true;
+    }
   }
 
   void _onLevelUp() {
-    if (_interstitialAd != null) {
+    // Salva antes de mostrar AD para garantir
+    _saveProgress();
+    
+    if (!_isNoAdsPurchased && _interstitialAd != null) {
       _interstitialAd!.show();
       _loadInterstitialAd();
     }
     _playSound('cash.wav');
+    _triggerCoinRain(); 
+    
     String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
     _showTip(msg, isImportant: true);
   }
@@ -271,14 +318,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
     if (!kIsWeb) Vibration.vibrate(duration: 15);
-    
-    if (totalEarnings > 20 && totalEarnings < 30 && !_hasShownFirstTip) {
-        _showTip(TranslationManager.translate('tip_combo'));
-        _hasShownFirstTip = true;
-    }
   }
 
-  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.5);
+  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.6);
 
   void _showTip(String message, {bool isImportant = false}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -300,21 +342,115 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
+  void _handleInput(PointerEvent details) {
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    
+    for (var key in _bubbleKeys) {
+      if (key.currentContext != null) {
+        final RenderBox bubbleBox = key.currentContext!.findRenderObject() as RenderBox;
+        final Offset localPos = bubbleBox.globalToLocal(details.position);
+        
+        if (bubbleBox.size.contains(localPos)) {
+          if (key.currentState != null && !key.currentState!.isPopped) {
+            key.currentState!.pop();
+            _onPop(); 
+          }
+          break; 
+        }
+      }
+    }
+  }
+
+  void _triggerCoinRain() {
+    setState(() {
+      _isRaining = true;
+      _coins = List.generate(30, (index) => CoinParticle());
+    });
+    _coinRainController.reset();
+    _coinRainController.forward();
+  }
+
+  // --- Ganhos Offline ---
+  Future<void> _checkOfflineEarningsOnResume() async {
+    final prefs = await SharedPreferences.getInstance();
+    int? lastSeen = prefs.getInt('last_seen');
+    if (lastSeen != null) {
+      _calculateAndShowOfflineEarnings(lastSeen);
+    }
+  }
+
+  void _calculateAndShowOfflineEarnings(int lastSeenTime) {
+    int currentTime = DateTime.now().millisecondsSinceEpoch;
+    int secondsPassed = ((currentTime - lastSeenTime) / 1000).floor();
+
+    if (secondsPassed > 60 && autoClickRate > 0) {
+      if (secondsPassed > 86400) secondsPassed = 86400;
+      double earned = secondsPassed * autoClickRate;
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Text(TranslationManager.translate('welcome_back')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.access_time_filled, size: 50, color: Colors.orange),
+              const SizedBox(height: 10),
+              Text(TranslationManager.translate('offline_work').replaceAll('@seconds', '$secondsPassed')),
+              const SizedBox(height: 10),
+              Text("+ ${formatMoney(earned)}", 
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green)),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                _addMoney(earned);
+                _triggerCoinRain(); 
+                Navigator.of(context).pop();
+              },
+              child: Text(TranslationManager.translate('collect_all')),
+            )
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showComingSoon() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(TranslationManager.translate('coming_soon_title')),
+        content: Text(TranslationManager.translate('coming_soon_msg')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(TranslationManager.translate('understood'))),
+        ],
+      )
+    );
+  }
+
+  // --- Persistência ---
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('money', money);
     await prefs.setDouble('totalEarnings', totalEarnings);
     await prefs.setInt('levelClick', levelClick);
     await prefs.setInt('levelAuto', levelAuto);
+    await prefs.setBool('no_ads', _isNoAdsPurchased);
+    await prefs.setInt('last_seen', DateTime.now().millisecondsSinceEpoch);
   }
 
-  Future<void> _loadProgress() async {
+  Future<void> _initGameData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       money = prefs.getDouble('money') ?? 0;
       totalEarnings = prefs.getDouble('totalEarnings') ?? 0;
       levelClick = prefs.getInt('levelClick') ?? 1;
       levelAuto = prefs.getInt('levelAuto') ?? 0;
+      _isNoAdsPurchased = prefs.getBool('no_ads') ?? false;
       
       clickValue = levelClick;
       autoClickRate = levelAuto * 2.0;
@@ -323,9 +459,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       
       _startAutoClicker();
     });
+
+    if (!_isNoAdsPurchased) {
+      _initBannerAd();
+      _loadInterstitialAd();
+      _loadRewardedAd();
+    }
+
+    int? lastSeen = prefs.getInt('last_seen');
+    if (lastSeen != null) {
+      Future.delayed(const Duration(seconds: 1), () => _calculateAndShowOfflineEarnings(lastSeen));
+    }
   }
 
+  // --- Configuração de Ads ---
   void _initBannerAd() {
+    if (_isNoAdsPurchased) return;
     _bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-3940256099942544/6300978111', 
       size: AdSize.banner,
@@ -338,6 +487,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _loadInterstitialAd() {
+    if (_isNoAdsPurchased) return;
     InterstitialAd.load(
       adUnitId: 'ca-app-pub-3940256099942544/1033173712', 
       request: const AdRequest(),
@@ -360,174 +510,338 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
+  void _loadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: 'ca-app-pub-3940256099942544/5224354917', 
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          setState(() {
+            _rewardedAd = ad;
+            _isRewardedAdReady = true;
+          });
+        },
+        onAdFailedToLoad: (err) {
+          setState(() => _isRewardedAdReady = false);
+        },
+      ),
+    );
+  }
+
+  void _showRewardedAd() {
+    if (_rewardedAd == null || !_isRewardedAdReady) {
+      _showTip(TranslationManager.translate('loading_ad'));
+      _loadRewardedAd();
+      return;
+    }
+
+    _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
+      double bonus = (autoClickRate > 0) ? autoClickRate * 120 : 500;
+      _addMoney(bonus);
+      _playSound('cash.wav');
+      _triggerCoinRain(); 
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(TranslationManager.translate('reward_title')),
+          content: Text(TranslationManager.translate('reward_msg').replaceAll('@amount', formatMoney(bonus))),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
+        )
+      );
+    });
+
+    _rewardedAd = null;
+    _isRewardedAdReady = false;
+    _loadRewardedAd();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFE0F7FA), Colors.white],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              LinearProgressIndicator(
-                value: currentLevelProgress,
-                backgroundColor: Colors.black12,
-                color: levelColor,
-                minHeight: 8,
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFE0F7FA), Colors.white],
               ),
-              
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text("LEVEL $currentLevel", style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)),
-                      Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                      Row(
-                        children: [
-                          Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 36),
-                          const SizedBox(width: 5),
-                          Text(formatMoney(money), 
-                            style: TextStyle(
-                              fontSize: 42, fontWeight: FontWeight.w900, height: 1,
-                              color: Colors.blueGrey.shade900,
-                            )
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: currentLevelProgress,
+                    backgroundColor: Colors.black12,
+                    color: levelColor,
+                    minHeight: 8,
+                  ),
+                  
+                  // HEADER COM TRADUÇÃO
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ESQUERDA: Nível e Dinheiro
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text("${TranslationManager.translate('level')} $currentLevel", 
+                            style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)),
+                          Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                          Row(
+                            children: [
+                              const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 32),
+                              const SizedBox(width: 5),
+                              Text(formatMoney(money), 
+                                style: TextStyle(
+                                  fontSize: 36, fontWeight: FontWeight.w900, height: 1,
+                                  color: Colors.blueGrey.shade900,
+                                )
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ]),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text(TranslationManager.translate('auto_bot'), style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                      Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: levelColor)),
-                    ]),
-                  ],
-                ),
-              ),
-              
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: _gridPadding),
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: _columns, 
-                      mainAxisSpacing: _gridPadding, 
-                      crossAxisSpacing: _gridPadding,
-                      childAspectRatio: 1.0,
-                    ),
-                    itemCount: _totalBubbles,
-                    itemBuilder: (context, index) => BubbleWidget(
-                      key: _bubbleKeys[index], 
-                      onPop: _onPop, 
-                      activeColor: levelColor,
+                        ]),
+                        
+                        // DIREITA: Auto Bot + Botão Bônus
+                        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                          if (!_isNoAdsPurchased)
+                            GestureDetector(
+                              onTap: _showRewardedAd,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: _isRewardedAdReady ? Colors.pinkAccent : Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: _isRewardedAdReady 
+                                    ? [BoxShadow(color: Colors.pinkAccent.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 3))]
+                                    : [],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.play_circle_fill, color: Colors.white, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _isRewardedAdReady ? TranslationManager.translate('bonus') : TranslationManager.translate('bonus_loading'), 
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            
+                          Text(TranslationManager.translate('auto_bot'), style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: levelColor)),
+                        ]),
+                      ],
                     ),
                   ),
+                  
+                  Expanded(
+                    child: Listener(
+                      onPointerMove: _handleInput,
+                      onPointerDown: _handleInput,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: _gridPadding),
+                        child: Center( 
+                          child: AspectRatio(
+                            aspectRatio: _columns / _rows,
+                            child: GridView.builder(
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: _columns, 
+                                mainAxisSpacing: _gridPadding, 
+                                crossAxisSpacing: _gridPadding,
+                                childAspectRatio: 1.0,
+                              ),
+                              itemCount: _totalBubbles,
+                              itemBuilder: (context, index) => BubbleWidget(
+                                key: _bubbleKeys[index], 
+                                activeColor: levelColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (!_isNoAdsPurchased)
+                    Container(
+                      height: 60,
+                      width: double.infinity,
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: (_isBannerAdLoaded && _bannerAd != null)
+                          ? AdWidget(ad: _bannerAd!)
+                          : Text(TranslationManager.translate('ad_space'), style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                    ),
+
+                  _buildStore(),
+                ],
+              ),
+            ),
+          ),
+
+          if (_isRaining)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: CoinRainPainter(_coins),
                 ),
               ),
-
-              Container(
-                height: 60,
-                width: double.infinity,
-                color: Colors.grey.shade200,
-                alignment: Alignment.center,
-                child: _isBannerAdLoaded
-                    ? AdWidget(ad: _bannerAd!)
-                    : Text(TranslationManager.translate('ad_loading'), style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-              ),
-
-              _buildStore(),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
 
   Widget _buildStore() {
     return Container(
-      height: 200, 
-      padding: const EdgeInsets.fromLTRB(15, 15, 15, 25),
+      height: 170, 
+      padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: Offset(0, -3))],
       ),
-      child: Row(
+      child: ListView( 
+        scrollDirection: Axis.horizontal,
         children: [
-          Expanded(child: _UpgradeCard(
-            title: TranslationManager.translate('click_power'), level: levelClick, cost: costClickUpgrade, 
-            icon: Icons.touch_app_rounded, canBuy: money >= costClickUpgrade, 
-            formatCost: formatMoney,
-            onTap: () {
-              if (money >= costClickUpgrade) {
-                _playSound('cash.wav');
-                setState(() {
-                  money -= costClickUpgrade;
-                  levelClick++;
-                  clickValue++;
-                  costClickUpgrade *= 1.5;
-                });
-                _saveProgress();
-              } else {
-                 _showTip(TranslationManager.translate('no_money'));
-              }
-            },
-          )),
-          const SizedBox(width: 15),
-          Expanded(child: _UpgradeCard(
-            title: TranslationManager.translate('auto_bot'), level: levelAuto, cost: costAutoUpgrade, 
-            icon: Icons.smart_toy_rounded, canBuy: money >= costAutoUpgrade,
-            formatCost: formatMoney,
-            onTap: () {
-              if (money >= costAutoUpgrade) {
-                _playSound('cash.wav');
-                setState(() {
-                  money -= costAutoUpgrade;
-                  levelAuto++;
-                  autoClickRate += 2;
-                  costAutoUpgrade *= 1.5;
-                  _startAutoClicker();
-                });
-                _saveProgress();
-              } else {
-                _showTip(TranslationManager.translate('no_money'));
-              }
-            },
-          )),
+          SizedBox(
+            width: 120,
+            child: _UpgradeCard(
+              title: TranslationManager.translate('click_power'), level: levelClick, cost: costClickUpgrade, 
+              icon: Icons.touch_app_rounded, canBuy: money >= costClickUpgrade, 
+              formatCost: formatMoney,
+              onTap: () {
+                if (money >= costClickUpgrade) {
+                  _playSound('cash.wav');
+                  setState(() {
+                    money -= costClickUpgrade;
+                    levelClick++;
+                    clickValue++;
+                    costClickUpgrade *= 1.5;
+                  });
+                  _saveProgress();
+                } else {
+                   _showTip(TranslationManager.translate('insufficient_funds'));
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 120,
+            child: _UpgradeCard(
+              title: TranslationManager.translate('auto_bot'), level: levelAuto, cost: costAutoUpgrade, 
+              icon: Icons.smart_toy_rounded, canBuy: money >= costAutoUpgrade,
+              formatCost: formatMoney,
+              onTap: () {
+                if (money >= costAutoUpgrade) {
+                  _playSound('cash.wav');
+                  setState(() {
+                    money -= costAutoUpgrade;
+                    levelAuto++;
+                    autoClickRate += 2;
+                    costAutoUpgrade *= 1.5;
+                    _startAutoClicker();
+                  });
+                  _saveProgress();
+                } else {
+                  _showTip(TranslationManager.translate('more_coins'));
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (!_isNoAdsPurchased)
+            GestureDetector(
+              onTap: _showComingSoon,
+              child: Container(
+                width: 130,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))],
+                ),
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.block, color: Colors.white, size: 28),
+                          const SizedBox(height: 2),
+                          Text(TranslationManager.translate('no_ads'), style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 14)),
+                          const SizedBox(height: 2),
+                          Text("USD \$9.99", style: TextStyle(color: Colors.white.withOpacity(0.7), decoration: TextDecoration.lineThrough, fontSize: 10)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                            child: const Text("USD \$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          )
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 5, right: 5,
+                      child: Transform.rotate(
+                        angle: 0.2,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                          child: const Text("-70%", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
+// --- WIDGET DA BOLHA (SEU LAYOUT LINDO MANTIDO 100%) ---
 class BubbleWidget extends StatefulWidget {
-  final VoidCallback onPop;
   final Color activeColor;
-  const BubbleWidget({super.key, required this.onPop, required this.activeColor});
+  const BubbleWidget({super.key, required this.activeColor});
   @override
-  State<BubbleWidget> createState() => _BubbleWidgetState();
+  State<BubbleWidget> createState() => BubbleWidgetState();
 }
 
-class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
+class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
+  double _rotationAngle = 0; 
+
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 80));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
+    _controller.addListener(() {
+      setState(() {
+        if (_controller.isAnimating) {
+          _rotationAngle = (Random().nextDouble() - 0.5) * 0.2; 
+        } else {
+          _rotationAngle = 0;
+        }
+      });
+    });
   }
 
   void pop() {
     if (isPopped) return;
     setState(() => isPopped = true);
     _controller.forward().then((_) => _controller.reverse());
-    widget.onPop();
     
     Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () {
       if (mounted) setState(() => isPopped = false);
@@ -536,44 +850,49 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: pop,
-      onPanDown: (_) => pop(),
-      onPanUpdate: (details) {
-        RenderBox box = context.findRenderObject() as RenderBox;
-        Offset localPosition = box.globalToLocal(details.globalPosition);
-        if (box.paintBounds.contains(localPosition)) {
-            pop();
-        }
-      },
+    return Transform.rotate(
+      angle: _rotationAngle,
       child: ScaleTransition(
-        scale: Tween(begin: 1.0, end: 0.85).animate(_controller),
+        scale: Tween(begin: 1.0, end: 0.7).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticIn)),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isPopped 
-                ? Colors.grey.withOpacity(0.1) 
-                : widget.activeColor.withOpacity(0.3),
+            gradient: isPopped 
+              ? null 
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.9),
+                    widget.activeColor.withOpacity(0.6),
+                    widget.activeColor,
+                  ],
+                  stops: const [0.0, 0.4, 1.0]
+                ),
+            color: isPopped ? Colors.grey.withOpacity(0.05) : null,
             border: Border.all(
-              color: isPopped ? Colors.transparent : widget.activeColor, 
-              width: 2
+              color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.3), 
+              width: 1
             ),
             boxShadow: isPopped ? [] : [
               BoxShadow(
                 color: widget.activeColor.withOpacity(0.2),
-                blurRadius: 8,
-                spreadRadius: 2,
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(4, 4) 
+              ),
+               BoxShadow(
+                color: Colors.white.withOpacity(0.8),
+                blurRadius: 10,
+                spreadRadius: -5,
+                offset: const Offset(-4, -4) 
               )
             ],
           ),
           child: isPopped ? null : Container(
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(
-                center: Alignment(-0.3, -0.4),
-                colors: [Colors.white54, Colors.transparent],
-              ),
             ),
           ),
         ),
@@ -588,6 +907,7 @@ class _BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSt
   }
 }
 
+// --- UPGRADE CARD & RAIN PAINTER (MANTIDOS) ---
 class _UpgradeCard extends StatelessWidget {
   final String title;
   final int level;
@@ -596,11 +916,13 @@ class _UpgradeCard extends StatelessWidget {
   final bool canBuy;
   final VoidCallback onTap;
   final String Function(double) formatCost;
+
   const _UpgradeCard({
     required this.title, required this.level, required this.cost, 
     required this.icon, required this.canBuy, required this.onTap,
     required this.formatCost,
   });
+
   @override
   Widget build(BuildContext context) {
     return Material( 
@@ -609,7 +931,7 @@ class _UpgradeCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: canBuy ? Colors.white : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(20),
@@ -619,23 +941,25 @@ class _UpgradeCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 32),
-              const SizedBox(height: 5),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center),
-              Text("Lv. $level", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 24),
+              const SizedBox(height: 2),
+              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
+              Text("Lvl $level", style: const TextStyle(fontSize: 10, color: Colors.grey)),
               const Spacer(),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 decoration: BoxDecoration(
                   color: canBuy ? Colors.green : Colors.grey, 
-                  borderRadius: BorderRadius.circular(10)
+                  borderRadius: BorderRadius.circular(8)
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    const Icon(Icons.monetization_on, color: Colors.white, size: 10),
+                    const SizedBox(width: 2),
                     Text(formatCost(cost), 
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   ],
                 ),
               )
@@ -645,4 +969,41 @@ class _UpgradeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class CoinParticle {
+  double x = Random().nextDouble() * 400; 
+  double y = -50 - Random().nextDouble() * 200; 
+  double speed = 5 + Random().nextDouble() * 10; 
+  double rotation = Random().nextDouble() * 2 * pi;
+  Color color = Colors.amber;
+}
+
+class CoinRainPainter extends CustomPainter {
+  final List<CoinParticle> coins;
+  CoinRainPainter(this.coins);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (var coin in coins) {
+      paint.color = coin.color;
+      canvas.save();
+      double drawX = coin.x % size.width;
+      canvas.translate(drawX, coin.y);
+      canvas.rotate(coin.rotation);
+      canvas.drawCircle(Offset.zero, 12, paint);
+      final borderPaint = Paint()..color = Colors.orange.shade900..style = PaintingStyle.stroke..strokeWidth = 2;
+      canvas.drawCircle(Offset.zero, 12, borderPaint);
+      TextPainter textPainter = TextPainter(
+        text: const TextSpan(text: '\$', style: TextStyle(color: Colors.black45, fontSize: 14, fontWeight: FontWeight.bold)),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      textPainter.paint(canvas, const Offset(-5, -8));
+      canvas.restore();
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
