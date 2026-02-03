@@ -693,27 +693,31 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-    Widget _buildStore() {
+  Widget _buildStore() {
     return Container(
-      height: 170, 
+      height: 170, // Altura fixa para manter a área de toque estável
       padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: Offset(0, -3))],
       ),
-      child: ListView( 
-        scrollDirection: Axis.horizontal,
+      // MUDANÇA 1: Trocamos ListView por Row para forçar a divisão de espaço
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch, // Estica os cards na altura
         children: [
-          SizedBox(
-            width: 120,
+          // --- CARD 1: CLICK POWER ---
+          Expanded( // Expanded obriga o card a ocupar 1/3 do espaço disponível
             child: _UpgradeCard(
-              title: TranslationManager.translate('click_power'), level: levelClick, cost: costClickUpgrade, 
-              icon: Icons.touch_app_rounded, canBuy: money >= costClickUpgrade, 
+              title: TranslationManager.translate('click_power'),
+              level: levelClick,
+              cost: costClickUpgrade,
+              icon: Icons.touch_app_rounded,
+              canBuy: money >= costClickUpgrade,
               formatCost: formatMoney,
               onTap: () {
                 if (money >= costClickUpgrade) {
-                  _playSound('cash.wav');
+                  _playSound('cash.wav'); // Som corrigido (fire-and-forget)
                   setState(() {
                     money -= costClickUpgrade;
                     levelClick++;
@@ -722,17 +726,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                   });
                   _saveProgress();
                 } else {
-                   _showTip(TranslationManager.translate('insufficient_funds'));
+                  _showTip(TranslationManager.translate('insufficient_funds'));
                 }
               },
             ),
           ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 120,
+          
+          const SizedBox(width: 8), // Espaço flexível entre cards
+
+          // --- CARD 2: AUTO BOT ---
+          Expanded( // Ocupa o segundo 1/3
             child: _UpgradeCard(
-              title: TranslationManager.translate('auto_bot'), level: levelAuto, cost: costAutoUpgrade, 
-              icon: Icons.smart_toy_rounded, canBuy: money >= costAutoUpgrade,
+              title: TranslationManager.translate('auto_bot'),
+              level: levelAuto,
+              cost: costAutoUpgrade,
+              icon: Icons.smart_toy_rounded,
+              canBuy: money >= costAutoUpgrade,
               formatCost: formatMoney,
               onTap: () {
                 if (money >= costAutoUpgrade) {
@@ -751,109 +760,99 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               },
             ),
           ),
-          const SizedBox(width: 10),
-          
-          // --- BLOCO NO ADS CORRIGIDO ---
-          // --- BLOCO NO ADS (CORRIGIDO V2 - RESPONSIVO) ---
+
+          const SizedBox(width: 8),
+
+          // --- CARD 3: NO ADS (RESPONSIVO V3) ---
           if (!_isNoAdsPurchased)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: SizedBox(
-                width: 120, // Largura fixa igual aos outros
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _showComingSoon,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFD700), Color(0xFFFF8F00)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))
-                        ],
+            Expanded( // Ocupa o último 1/3
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _showComingSoon,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD700), Color(0xFFFF8F00)],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
-                      child: Stack(
-                        children: [
-                          // Conteúdo Principal com Padding Reduzido
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 12, 8, 8), // Ajuste fino nas margens
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Parte de Cima (Icone + Texto)
-                                Column(
-                                  children: [
-                                    const Icon(Icons.block_flipped, color: Colors.white, size: 26), // Ícone levemente menor
-                                    const SizedBox(height: 2),
-                                    FittedBox( // Garante que o texto não quebre linha
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        TranslationManager.translate('no_ads'),
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                
-                                // Botão de Preço (Blindado contra overflow)
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.redAccent.shade700,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))]
-                                  ),
-                                  child: const FittedBox( // O segredo: Escala o preço se ele for grande demais
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                children: [
+                                  // Icone que escala se a tela for pequena
+                                  const FittedBox(child: Icon(Icons.block_flipped, color: Colors.white, size: 28)),
+                                  const SizedBox(height: 4),
+                                  // Texto que diminui a fonte automaticamente
+                                  FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Text(
-                                      "\$2.79",
+                                      TranslationManager.translate('no_ads'),
                                       textAlign: TextAlign.center,
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 12),
                                     ),
                                   ),
+                                ],
+                              ),
+                              
+                              // Botão de Preço Responsivo
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent.shade700,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ],
+                                child: const FittedBox( // O segredo: Texto nunca estoura
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    "\$2.79",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Tag de Desconto
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(10),
+                                topRight: Radius.circular(20),
+                              ),
+                            ),
+                            child: const Text(
+                              "-70%",
+                              style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.w900),
                             ),
                           ),
-                          
-                          // Tag de Desconto (Ajustada para dentro da borda)
-                          Positioned(
-                            top: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  bottomLeft: Radius.circular(10),
-                                  topRight: Radius.circular(20), // Segue a curva do card perfeitamente
-                                ),
-                              ),
-                              child: const Text(
-                                "-70%",
-                                style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.w900),
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
+                        )
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-
-            // Fim do Bloco No Ads
-            
-            // Espaço extra no final pra garantir scroll
-            const SizedBox(width: 20),
         ],
       ),
     );
