@@ -157,7 +157,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isNoAdsPurchased = false; 
 
   // --- Ads & Audio ---
-  final AudioPlayer _sfxPlayer = AudioPlayer();
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
   InterstitialAd? _interstitialAd;
@@ -321,7 +320,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (!kIsWeb) Vibration.vibrate(duration: 15);
   }
 
-  void _playSound(String file) => _sfxPlayer.play(AssetSource('audio/$file'), volume: 0.6);
+  // --- CORREÇÃO DE ÁUDIO (Polifonia / Fire-and-Forget) ---
+  void _playSound(String file) {
+    // Cria uma nova instância para cada som, permitindo sobreposição (sem engasgo)
+    AudioPlayer().play(AssetSource('audio/$file'), volume: 0.6, mode: PlayerMode.lowLatency);
+  }
+
 
   void _showTip(String message, {bool isImportant = false}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -752,11 +756,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
           const SizedBox(width: 10),
           
           // --- BLOCO NO ADS CORRIGIDO ---
+          // --- BLOCO NO ADS (CORRIGIDO V2 - RESPONSIVO) ---
           if (!_isNoAdsPurchased)
-            Padding( // Adicionei um Padding leve para separar do card anterior
-              padding: const EdgeInsets.only(left: 4), 
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
               child: SizedBox(
-                width: 120, // MESMA largura dos outros cards (Consistência = Beleza)
+                width: 120, // Largura fixa igual aos outros
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -765,7 +770,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     child: Ink(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFFD700), Color(0xFFFF8F00)], // Gradiente Ouro mais rico
+                          colors: [Color(0xFFFFD700), Color(0xFFFF8F00)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
@@ -776,45 +781,51 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                       ),
                       child: Stack(
                         children: [
-                          // Conteúdo Principal
+                          // Conteúdo Principal com Padding Reduzido
                           Padding(
-                            padding: const EdgeInsets.all(10), // Padding igual ao _UpgradeCard
+                            padding: const EdgeInsets.fromLTRB(8, 12, 8, 8), // Ajuste fino nas margens
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Força o botão para baixo
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 // Parte de Cima (Icone + Texto)
                                 Column(
                                   children: [
-                                    const Icon(Icons.block_flipped, color: Colors.white, size: 28),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      TranslationManager.translate('no_ads'),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 12),
+                                    const Icon(Icons.block_flipped, color: Colors.white, size: 26), // Ícone levemente menor
+                                    const SizedBox(height: 2),
+                                    FittedBox( // Garante que o texto não quebre linha
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        TranslationManager.translate('no_ads'),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 12),
+                                      ),
                                     ),
                                   ],
                                 ),
                                 
-                                // O Botão de Preço (Agora alinhado com os vizinhos)
+                                // Botão de Preço (Blindado contra overflow)
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.redAccent.shade700, // Vermelho de oferta
+                                    color: Colors.redAccent.shade700,
                                     borderRadius: BorderRadius.circular(8),
                                     boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))]
                                   ),
-                                  child: const Text(
-                                    "\$2.79",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                  child: const FittedBox( // O segredo: Escala o preço se ele for grande demais
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      "\$2.79",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           
-                          // Tag de Desconto (Ajustada para não sair da borda)
+                          // Tag de Desconto (Ajustada para dentro da borda)
                           Positioned(
                             top: 0,
                             right: 0,
@@ -824,7 +835,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 color: Colors.white,
                                 borderRadius: BorderRadius.only(
                                   bottomLeft: Radius.circular(10),
-                                  topRight: Radius.circular(20), // Segue a curva do card
+                                  topRight: Radius.circular(20), // Segue a curva do card perfeitamente
                                 ),
                               ),
                               child: const Text(
@@ -840,6 +851,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 ),
               ),
             ),
+
             // Fim do Bloco No Ads
             
             // Espaço extra no final pra garantir scroll
