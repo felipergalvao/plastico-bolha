@@ -1,4 +1,4 @@
-name: Build Combo (APK + AAB)
+name: Build Combo (Turbo Cache)
 
 on:
   push:
@@ -7,17 +7,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30 # Trava de segurança
     permissions:
       contents: read
 
     steps:
       - uses: actions/checkout@v4
       
-      - name: Configurar Java
+      # OTIMIZAÇÃO 1: Ativamos o cache do Gradle aqui
+      - name: Configurar Java + Cache Gradle
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
+          cache: 'gradle' # <--- O SEGREDO DA VELOCIDADE
           
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
@@ -27,6 +30,9 @@ jobs:
 
       - name: Baixar Dependências
         run: flutter pub get
+        
+      - name: Tornar gradlew executável
+        run: chmod +x android/gradlew
 
       - name: Gerar Ícones
         run: dart run flutter_launcher_icons
@@ -58,14 +64,10 @@ jobs:
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
 
       # --- UPLOADS ---
-      - name: Upload do APK
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: apk-v${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Upload do AAB (Bundle)
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-playstore-v${{ github.run_number }}
-          path: build/app/outputs/bundle/release/app-release.aab
+          name: release-builds
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab

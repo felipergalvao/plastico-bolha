@@ -763,9 +763,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
           const SizedBox(width: 8),
 
-          // --- CARD 3: NO ADS (RESPONSIVO V3) ---
+          // --- CARD 3: NO ADS (100% ELÁSTICO) ---
           if (!_isNoAdsPurchased)
-            Expanded( // Ocupa o último 1/3
+            Expanded(
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -786,65 +786,68 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                     child: Stack(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                          padding: const EdgeInsets.all(8.0),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                children: [
-                                  // Icone que escala se a tela for pequena
-                                  const FittedBox(child: Icon(Icons.block_flipped, color: Colors.white, size: 28)),
-                                  const SizedBox(height: 4),
-                                  // Texto que diminui a fonte automaticamente
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      TranslationManager.translate('no_ads'),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 12),
+                              // Ícone e Texto (Topo)
+                              Expanded(
+                                flex: 6,
+                                child: Column(
+                                  children: [
+                                    const Expanded(
+                                      flex: 3, 
+                                      child: FittedBox(child: Icon(Icons.block_flipped, color: Colors.white))
                                     ),
-                                  ),
-                                ],
+                                    Expanded(
+                                      flex: 2,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          TranslationManager.translate('no_ads'),
+                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               
-                              // Botão de Preço Responsivo
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.redAccent.shade700,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const FittedBox( // O segredo: Texto nunca estoura
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    "\$2.79",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              const Spacer(flex: 1),
+
+                              // Botão Preço (Base)
+                              Expanded(
+                                flex: 3,
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.redAccent.shade700,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const FittedBox(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(2.0),
+                                      child: Text(
+                                        "\$2.79",
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        
-                        // Tag de Desconto
+                        // Tag (Fixa, pois deve ser discreta)
                         Positioned(
-                          top: 0,
-                          right: 0,
+                          top: 0, right: 0,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                             decoration: const BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                bottomLeft: Radius.circular(10),
-                                topRight: Radius.circular(20),
-                              ),
+                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(10), topRight: Radius.circular(20)),
                             ),
-                            child: const Text(
-                              "-70%",
-                              style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.w900),
-                            ),
+                            child: const Text("-70%", style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.w900)),
                           ),
                         )
                       ],
@@ -947,6 +950,7 @@ class _UpgradeCard extends StatelessWidget {
   final String Function(double) formatCost;
 
   const _UpgradeCard({
+    super.key, // Adicionei super.key pra boas práticas
     required this.title, required this.level, required this.cost, 
     required this.icon, required this.canBuy, required this.onTap,
     required this.formatCost,
@@ -960,32 +964,58 @@ class _UpgradeCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8), // Padding levemente reduzido
           decoration: BoxDecoration(
             color: canBuy ? Colors.white : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: canBuy ? Colors.blueAccent : Colors.grey.shade300, width: 2),
-            boxShadow: canBuy ? [BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 5, offset: Offset(0, 2))] : [],
+            boxShadow: canBuy ? [BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2))] : [],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey, size: 24),
-              const SizedBox(height: 2),
-              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
-              Text("Lvl $level", style: const TextStyle(fontSize: 10, color: Colors.grey)),
-              const Spacer(),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(color: canBuy ? Colors.green : Colors.grey, borderRadius: BorderRadius.circular(8)),
-                child: Row(
+              // 1. Ícone que cresce (35% do espaço)
+              Expanded(
+                flex: 4,
+                child: FittedBox(
+                  child: Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey),
+                ),
+              ),
+              
+              // 2. Títulos que crescem (25% do espaço)
+              Expanded(
+                flex: 3,
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.monetization_on, color: Colors.white, size: 10),
-                    const SizedBox(width: 2),
-                    Text(formatCost(cost), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text("Lvl $level", style: const TextStyle(color: Colors.grey))),
                   ],
+                ),
+              ),
+              
+              const Spacer(flex: 1),
+
+              // 3. Botão de Preço que cresce (25% do espaço)
+              Expanded(
+                flex: 3,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: canBuy ? Colors.green : Colors.grey, 
+                    borderRadius: BorderRadius.circular(8)
+                  ),
+                  child: FittedBox( // O texto do preço vai se ajustar ao botão
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.monetization_on, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(formatCost(cost), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
                 ),
               )
             ],
@@ -995,6 +1025,7 @@ class _UpgradeCard extends StatelessWidget {
     );
   }
 }
+
 
 class CoinParticle {
   double x = Random().nextDouble() * 400; 
