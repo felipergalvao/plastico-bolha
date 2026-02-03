@@ -304,19 +304,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _onLevelUp() {
     _saveProgress();
     
-    // 1. Festa Visual e Sonora
+    // 1. Festa Visual Imediata
     _playSound('cash.wav');
     _triggerCoinRain(); 
     
     String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
     _showTip(msg, isImportant: true);
 
-    // 2. Armar o Gatilho (Silent Mode)
-    // Se o usuário não pagou "No Ads", o próximo clique dele vai disparar o comercial.
+    // 2. O "Escudo" de 8 Segundos
     if (!_isNoAdsPurchased) {
-      _pendingAdTrigger = true;
+      // O gatilho NÃO é armado agora. Esperamos 8 segundos.
+      // Durante esse tempo, o jogador clica e NADA de anúncio atrapalhar.
+      Future.delayed(const Duration(seconds: 8), () {
+        // Só armamos o gatilho se o usuário ainda estiver na tela
+        if (mounted) {
+           _pendingAdTrigger = true; 
+           // Midas Obs: A partir de AGORA, o próximo clique chamará o anúncio.
+        }
+      });
     }
   }
+
 
     void _onPop() {
     _addMoney(clickValue.toDouble());
