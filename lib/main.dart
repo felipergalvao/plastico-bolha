@@ -170,6 +170,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   late AnimationController _coinRainController;
   List<CoinParticle> _coins = [];
   bool _isRaining = false;
+  bool _pendingAdTrigger = false; // Gatilho: O próximo clique vai soltar um anúncio?
 
   // --- Grid ---
   final int _columns = 5;
@@ -302,21 +303,43 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _onLevelUp() {
     _saveProgress();
-    if (!_isNoAdsPurchased && _interstitialAd != null) {
-      _interstitialAd!.show();
-      _loadInterstitialAd();
-    }
+    
+    // 1. Festa Visual e Sonora
     _playSound('cash.wav');
     _triggerCoinRain(); 
+    
     String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
     _showTip(msg, isImportant: true);
+
+    // 2. Armar o Gatilho (Silent Mode)
+    // Se o usuário não pagou "No Ads", o próximo clique dele vai disparar o comercial.
+    if (!_isNoAdsPurchased) {
+      _pendingAdTrigger = true;
+    }
   }
 
-  void _onPop() {
+    void _onPop() {
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
     if (!kIsWeb) Vibration.vibrate(duration: 15);
+
+    // --- LÓGICA DO GATILHO DE AD ---
+    if (_pendingAdTrigger) {
+      // Verifica se o anúncio está carregado e pronto
+      if (_interstitialAd != null) {
+        // Pequeno delay de segurança para o som do 'pop' terminar
+        // e evitar clique acidental imediato (Safety Policy do AdMob)
+        Future.delayed(const Duration(milliseconds: 300), () {
+           if (mounted && _interstitialAd != null) { // Checagem dupla
+             _interstitialAd!.show();
+             _loadInterstitialAd(); // Já carrega o próximo
+           }
+        });
+      }
+      _pendingAdTrigger = false; // Desarma o gatilho imediatamente
+    }
   }
+
 
   // --- CORREÇÃO DE ÁUDIO (Polifonia / Fire-and-Forget) ---
   void _playSound(String file) {
