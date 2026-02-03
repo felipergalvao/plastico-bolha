@@ -31,9 +31,6 @@ jobs:
       - name: Baixar Dependências
         run: flutter pub get
         
-      - name: Tornar gradlew executável
-        run: chmod +x android/gradlew
-
       - name: Gerar Ícones
         run: dart run flutter_launcher_icons
 
