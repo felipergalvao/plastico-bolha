@@ -753,72 +753,89 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
           
           // --- BLOCO NO ADS CORRIGIDO ---
           if (!_isNoAdsPurchased)
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _showComingSoon,
-                borderRadius: BorderRadius.circular(20),
-                child: Ink(
-                  width: 135, // Largura ajustada
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFD700), Color(0xFFFFA000)], 
-                      begin: Alignment.topLeft, 
-                      end: Alignment.bottomRight
-                    ),
-                    borderRadius: BorderRadius.circular(20), // Garante bordas redondas
-                    boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))],
-                  ),
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Espaçamento igual
-                          children: [
-                            const Icon(Icons.block_flipped, color: Colors.white, size: 32), // Ícone maior e mais limpo
-                            Column(
+            Padding( // Adicionei um Padding leve para separar do card anterior
+              padding: const EdgeInsets.only(left: 4), 
+              child: SizedBox(
+                width: 120, // MESMA largura dos outros cards (Consistência = Beleza)
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _showComingSoon,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFD700), Color(0xFFFF8F00)], // Gradiente Ouro mais rico
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          // Conteúdo Principal
+                          Padding(
+                            padding: const EdgeInsets.all(10), // Padding igual ao _UpgradeCard
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Força o botão para baixo
                               children: [
-                                Text(
-                                  TranslationManager.translate('no_ads'), 
-                                  style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 13)
+                                // Parte de Cima (Icone + Texto)
+                                Column(
+                                  children: [
+                                    const Icon(Icons.block_flipped, color: Colors.white, size: 28),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      TranslationManager.translate('no_ads'),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 12),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 4),
+                                
+                                // O Botão de Preço (Agora alinhado com os vizinhos)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.shade600, 
-                                    borderRadius: BorderRadius.circular(12)
+                                    color: Colors.redAccent.shade700, // Vermelho de oferta
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))]
                                   ),
                                   child: const Text(
-                                    "\$2.79", 
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)
+                                    "\$2.79",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                                   ),
                                 ),
                               ],
-                            )
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        top: 8, right: 8, // Mais pra dentro pra não cortar
-                        child: Transform.rotate(
-                          angle: 0.2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.white, 
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)]
-                            ),
-                            child: const Text(
-                              "-70%", 
-                              style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.w900)
                             ),
                           ),
-                        ),
-                      )
-                    ],
+                          
+                          // Tag de Desconto (Ajustada para não sair da borda)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.only(
+                                  bottomLeft: Radius.circular(10),
+                                  topRight: Radius.circular(20), // Segue a curva do card
+                                ),
+                              ),
+                              child: const Text(
+                                "-70%",
+                                style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.w900),
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
