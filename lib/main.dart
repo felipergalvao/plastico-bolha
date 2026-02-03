@@ -154,6 +154,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
   
+  int prestigeLevel = 0; // Quantas vezes renasceu
+  double get prestigeMultiplier => 1.0 + (prestigeLevel * 0.20); // Cada renascimento dá +20% de lucro
+  
   bool _isNoAdsPurchased = false; 
 
   // --- Ads & Audio ---
@@ -180,6 +183,67 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   late List<GlobalKey<BubbleWidgetState>> _bubbleKeys;
 
   @override
+    void _doPrestige() {
+    _playSound('cash.wav');
+    setState(() {
+      // 1. Aumenta o Multiplicador
+      prestigeLevel++;
+      
+      // 2. RESETA O PROGRESSO (Dói, mas é necessário)
+      money = 0;
+      totalEarnings = 0;
+      clickValue = 1;
+      autoClickRate = 0;
+      levelClick = 1;
+      levelAuto = 0;
+      
+      // 3. Reseta os custos
+      costClickUpgrade = 50;
+      costAutoUpgrade = 100;
+      
+      // 4. Limpa as partículas e timers
+      _coins.clear();
+      _isRaining = false;
+    });
+    
+    _saveProgress(); // Salva o estado "zerado"
+    
+    // Feedback visual
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).toInt()}%"),
+        backgroundColor: Colors.purpleAccent,
+        behavior: SnackBarBehavior.floating,
+      )
+    );
+  }
+
+  void _showPrestigeDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("👑 RENASCIMENTO"),
+        content: Text(
+          "O jogo está muito difícil?\n\n"
+          "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
+          "Atual: ${((prestigeMultiplier-1)*100).toInt()}%\n"
+          "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).toInt()}%"
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+            onPressed: () {
+              Navigator.pop(context);
+              _doPrestige();
+            },
+            child: const Text("RENASCER AGORA", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      )
+    );
+  }
+
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
@@ -289,9 +353,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (!mounted) return;
     int oldLevel = currentLevel;
     setState(() {
-      money += amount;
-      totalEarnings += amount;
-    });
+      double finalAmount = amount * prestigeMultiplier; 
+    money += finalAmount;
+    totalEarnings += finalAmount;
+  });
 
     if (currentLevel > oldLevel) _onLevelUp();
     
@@ -301,29 +366,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  void _onLevelUp() {
+    void _onLevelUp() {
     _saveProgress();
     
-    // 1. Festa Visual Imediata
+    // 1. Festa Visual
     _playSound('cash.wav');
     _triggerCoinRain(); 
     
     String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
     _showTip(msg, isImportant: true);
 
-    // 2. O "Escudo" de 8 Segundos
+    // --- NOVO: GATILHO DO PRESTIGE (NÍVEL 10) ---
+    // Se chegou no nível 10 e ainda não tem prestígio, avisa o cara!
+    if (currentLevel == 10 && prestigeLevel == 0) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) _showPrestigeDialog(); // Abre a explicação automaticamente
+      });
+    }
+
+    // 2. O "Escudo" de Anúncios (8 Segundos)
     if (!_isNoAdsPurchased) {
-      // O gatilho NÃO é armado agora. Esperamos 8 segundos.
-      // Durante esse tempo, o jogador clica e NADA de anúncio atrapalhar.
       Future.delayed(const Duration(seconds: 8), () {
-        // Só armamos o gatilho se o usuário ainda estiver na tela
         if (mounted) {
            _pendingAdTrigger = true; 
-           // Midas Obs: A partir de AGORA, o próximo clique chamará o anúncio.
         }
       });
     }
   }
+
 
 
     void _onPop() {
@@ -469,6 +539,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     await prefs.setInt('levelAuto', levelAuto);
     await prefs.setBool('no_ads', _isNoAdsPurchased);
     await prefs.setInt('last_seen', DateTime.now().millisecondsSinceEpoch);
+    await prefs.setInt('prestigeLevel', prestigeLevel); // Salva o renascimento
   }
 
   Future<void> _initGameData() async {
@@ -479,6 +550,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       levelClick = prefs.getInt('levelClick') ?? 1;
       levelAuto = prefs.getInt('levelAuto') ?? 0;
       _isNoAdsPurchased = prefs.getBool('no_ads') ?? false;
+      prestigeLevel = prefs.getInt('prestigeLevel') ?? 0;
       
       clickValue = levelClick;
       autoClickRate = levelAuto * 2.0;
@@ -498,7 +570,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (lastSeen != null) {
       Future.delayed(const Duration(seconds: 1), () => _calculateAndShowOfflineEarnings(lastSeen));
     }
+
+    // --- NOVO: CHECAGEM PARA VETERANOS (Retroativa) ---
+    // Se o jogador atualizou o app e JÁ ESTÁ acima do nível 10, mostramos o aviso.
+    if (currentLevel >= 10 && prestigeLevel == 0) {
+      Future.delayed(const Duration(seconds: 3), () { 
+        // Delay de 3s para dar tempo de carregar a UI e mostrar o ganho offline primeiro (se houver)
+        if (mounted) _showPrestigeDialog(); 
+      });
+    }
   }
+
 
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
@@ -611,23 +693,63 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text("${TranslationManager.translate('level')} $currentLevel", 
-                            style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)),
-                          Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                          Row(
-                            children: [
-                              const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 32),
-                              const SizedBox(width: 5),
-                              Text(formatMoney(money), 
-                                style: TextStyle(
-                                  fontSize: 36, fontWeight: FontWeight.w900, height: 1,
-                                  color: Colors.blueGrey.shade900,
-                                )
-                              ),
-                            ],
-                          ),
-                        ]),
+                        // --- SUBSTITUA ESTA COLUNA DA ESQUERDA INTEIRA ---
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, 
+                          children: [
+                            // 1. LINHA DO NÍVEL + BOTÃO DE PRESTIGE
+                            Row(
+                              children: [
+                                Text(
+                                  "${TranslationManager.translate('level')} $currentLevel", 
+                                  style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
+                                ),
+                                
+                                // O BOTÃO COROA (Aparece se Nível >= 10)
+                                if (currentLevel >= 10)
+                                  GestureDetector(
+                                    onTap: _showPrestigeDialog,
+                                    child: Container(
+                                      margin: const EdgeInsets.only(left: 8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.purpleAccent, // Roxo para destacar
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(color: Colors.purple.withOpacity(0.4), blurRadius: 4)
+                                        ]
+                                      ),
+                                      child: Row(
+                                        children: const [
+                                           Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+                                           SizedBox(width: 4),
+                                           Text("RESTART", style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold))
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                              ],
+                            ),
+
+                            // 2. TEXTO DA META (Logo abaixo)
+                            Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                            
+                            // 3. DINHEIRO GRANDE
+                            Row(
+                              children: [
+                                const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 32),
+                                const SizedBox(width: 5),
+                                Text(formatMoney(money), 
+                                  style: TextStyle(
+                                    fontSize: 36, fontWeight: FontWeight.w900, height: 1,
+                                    color: Colors.blueGrey.shade900,
+                                  )
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        // --- FIM DA COLUNA DA ESQUERDA ---
                         
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                           if (!_isNoAdsPurchased)
