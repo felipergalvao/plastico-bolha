@@ -203,7 +203,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
-    _sfxPlayer.setReleaseMode(ReleaseMode.stop);
     
     _initGameData(); 
 
@@ -221,7 +220,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     WidgetsBinding.instance.removeObserver(this);
     _autoClickTimer?.cancel();
     _coinRainController.dispose();
-    _sfxPlayer.dispose();
     _bannerAd?.dispose();
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
