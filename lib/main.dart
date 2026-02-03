@@ -1,6 +1,7 @@
 ﻿import 'dart:async';
 import 'dart:math';
 import 'dart:ui'; 
+import 'dart:io'; // Para PlatformDispatcher funcionar corretamente
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +19,6 @@ void main() {
 
 class TranslationManager {
   static String get languageCode {
-    // Pega o código do idioma (ex: 'pt', 'es', 'en')
     return PlatformDispatcher.instance.locale.languageCode;
   }
 
@@ -27,7 +27,7 @@ class TranslationManager {
       'app_title': 'Bubble Wrap Tycoon',
       'tip_slide': 'Slide your finger to pop multiple bubbles!',
       'tip_shop': 'Tip: Go to the Shop and upgrade your click!',
-      'level_up': 'LEVEL UP! Level @level reached!',
+      'level_up': 'LEVEL UP!\nLevel @level reached!',
       'next_goal': 'Level @next in @percent%',
       'welcome_back': 'Welcome back!',
       'offline_work': 'Your Auto Bot worked for @seconds s.',
@@ -52,7 +52,7 @@ class TranslationManager {
       'app_title': 'Plástico Bolha Tycoon',
       'tip_slide': 'Deslize o dedo para estourar várias bolhas!',
       'tip_shop': 'Dica: Vá na Loja e melhore seu clique!',
-      'level_up': 'LEVEL UP! Nível @level alcançado!',
+      'level_up': 'LEVEL UP!\nNível @level alcançado!',
       'next_goal': 'Nível @next em @percent%',
       'welcome_back': 'Bem-vindo de volta!',
       'offline_work': 'Seu Auto Bot trabalhou por @seconds s.',
@@ -77,7 +77,7 @@ class TranslationManager {
       'app_title': 'Plástico Burbuja Tycoon',
       'tip_slide': '¡Desliza el dedo para explotar burbujas!',
       'tip_shop': 'Consejo: ¡Ve a la Tienda y mejora tu clic!',
-      'level_up': '¡NIVEL SUPERADO! ¡Nivel @level alcanzado!',
+      'level_up': '¡NIVEL SUPERADO!\n¡Nivel @level alcanzado!',
       'next_goal': 'Nivel @next en @percent%',
       'welcome_back': '¡Bienvenido de nuevo!',
       'offline_work': 'Tu Auto Bot trabajó por @seconds s.',
@@ -101,8 +101,6 @@ class TranslationManager {
   };
 
   static String translate(String key) {
-    // Tenta pegar o idioma exato (ex: 'pt', 'es')
-    // Se não tiver, cai pro inglês
     String lang = _localizedValues.containsKey(languageCode) ? languageCode : 'en';
     return _localizedValues[lang]?[key] ?? key;
   }
@@ -110,14 +108,11 @@ class TranslationManager {
 
 class BubbleTycoonApp extends StatelessWidget {
   const BubbleTycoonApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bubble Tycoon',
       debugShowCheckedModeBanner: false,
-      // --- CORREÇÃO DE IDIOMA ---
-      // Dizemos ao Flutter explicitamente quais idiomas suportamos
       supportedLocales: const [
         Locale('en', ''),
         Locale('pt', ''),
@@ -154,12 +149,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
   
-  int prestigeLevel = 0; // Quantas vezes renasceu
-  double get prestigeMultiplier => 1.0 + (prestigeLevel * 0.20); // Cada renascimento dá +20% de lucro
+  // --- PRESTIGE (Renascimento) ---
+  int prestigeLevel = 0; 
+  double get prestigeMultiplier => 1.0 + (prestigeLevel * 0.20); 
   
-  bool _isNoAdsPurchased = false; 
-
-  // --- Ads & Audio ---
+  bool _isNoAdsPurchased = false;
+  
+  // --- Ads ---
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
   InterstitialAd? _interstitialAd;
@@ -173,7 +169,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   late AnimationController _coinRainController;
   List<CoinParticle> _coins = [];
   bool _isRaining = false;
-  bool _pendingAdTrigger = false; // Gatilho: O próximo clique vai soltar um anúncio?
+  bool _pendingAdTrigger = false;
+
+  // --- AUDIO POOL OTIMIZADO (Correção de Lag) ---
+  final List<AudioPlayer> _sfxPool = [];
+  int _poolIndex = 0;
+  final int _poolSize = 10; // Limite de sons simultâneos para não travar a CPU
 
   // --- Grid ---
   final int _columns = 5;
@@ -183,67 +184,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   late List<GlobalKey<BubbleWidgetState>> _bubbleKeys;
 
   @override
-    void _doPrestige() {
-    _playSound('cash.wav');
-    setState(() {
-      // 1. Aumenta o Multiplicador
-      prestigeLevel++;
-      
-      // 2. RESETA O PROGRESSO (Dói, mas é necessário)
-      money = 0;
-      totalEarnings = 0;
-      clickValue = 1;
-      autoClickRate = 0;
-      levelClick = 1;
-      levelAuto = 0;
-      
-      // 3. Reseta os custos
-      costClickUpgrade = 50;
-      costAutoUpgrade = 100;
-      
-      // 4. Limpa as partículas e timers
-      _coins.clear();
-      _isRaining = false;
-    });
-    
-    _saveProgress(); // Salva o estado "zerado"
-    
-    // Feedback visual
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).toInt()}%"),
-        backgroundColor: Colors.purpleAccent,
-        behavior: SnackBarBehavior.floating,
-      )
-    );
-  }
-
-  void _showPrestigeDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("👑 RENASCIMENTO"),
-        content: Text(
-          "O jogo está muito difícil?\n\n"
-          "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
-          "Atual: ${((prestigeMultiplier-1)*100).toInt()}%\n"
-          "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).toInt()}%"
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-            onPressed: () {
-              Navigator.pop(context);
-              _doPrestige();
-            },
-            child: const Text("RENASCER AGORA", style: TextStyle(color: Colors.white)),
-          )
-        ],
-      )
-    );
-  }
-
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
@@ -266,12 +206,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       }
     });
 
+    // --- INICIALIZA O POOL DE ÁUDIO ---
+    // Prepara os players na memória para uso rápido
+    for (int i = 0; i < _poolSize; i++) {
+      final player = AudioPlayer();
+      player.setPlayerMode(PlayerMode.lowLatency); // Modo otimizado para efeitos curtos
+      _sfxPool.add(player);
+    }
+
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
     
-    _initGameData(); 
-
-    // Dica inicial (com delay para garantir que buildou)
+    _initGameData();
+    
     Future.delayed(const Duration(seconds: 2), () {
       if (totalEarnings == 0) {
         _showTip(TranslationManager.translate('tip_slide'));
@@ -288,28 +235,40 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _bannerAd?.dispose();
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
+    
+    // Limpa a memória dos áudios
+    for (var player in _sfxPool) {
+      player.dispose();
+    }
+    
     super.dispose();
   }
 
-  // --- DETECTOR DE MUDANÇA DE IDIOMA EM TEMPO REAL ---
-  @override
-  void didChangeLocales(List<Locale>? locales) {
-    super.didChangeLocales(locales);
-    // Força a tela a ser redesenhada quando o idioma do celular muda
-    setState(() {});
-  }
-
+  // --- GERENCIAMENTO DE CICLO DE VIDA (Correção de Vibração Fantasma) ---
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // O USUÁRIO SAIU DO APP
       _autoClickTimer?.cancel();
+      Vibration.cancel(); // <--- TRAVA DE SEGURANÇA: PARA DE VIBRAR IMEDIATAMENTE!
+      
+      // Para todos os sons para não ficar tocando no fundo
+      for (var player in _sfxPool) {
+        player.stop();
+      }
+      
       _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
-      _checkOfflineEarningsOnResume(); 
-      // Atualiza idioma ao voltar pro app
+      _checkOfflineEarningsOnResume();
       setState(() {});
     }
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    super.didChangeLocales(locales);
+    setState(() {});
   }
 
   void _startAutoClicker() {
@@ -325,11 +284,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (value >= 1000000000) return "\$${(value / 1000000000).toStringAsFixed(2)}B";
     if (value >= 1000000) return "\$${(value / 1000000).toStringAsFixed(2)}M"; 
     if (value >= 1000) return "\$${(value / 1000).toStringAsFixed(1)}k";
-    return "\$${value.toStringAsFixed(0)}"; 
+    return "\$${value.toStringAsFixed(0)}";
   }
 
   int get currentLevel => 1 + (sqrt(totalEarnings / 100)).floor();
-
   double get currentLevelProgress {
     int lvl = currentLevel;
     double xpStart = 100.0 * pow(lvl - 1, 2);
@@ -354,10 +312,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     int oldLevel = currentLevel;
     setState(() {
       double finalAmount = amount * prestigeMultiplier; 
-    money += finalAmount;
-    totalEarnings += finalAmount;
-  });
-
+      money += finalAmount;
+      totalEarnings += finalAmount;
+    });
     if (currentLevel > oldLevel) _onLevelUp();
     
     if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
@@ -366,7 +323,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-    void _onLevelUp() {
+  // --- LÓGICA DE LEVEL UP COM PROTEÇÃO DE ANÚNCIO ---
+  void _onLevelUp() {
     _saveProgress();
     
     // 1. Festa Visual
@@ -376,15 +334,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
     _showTip(msg, isImportant: true);
 
-    // --- NOVO: GATILHO DO PRESTIGE (NÍVEL 10) ---
-    // Se chegou no nível 10 e ainda não tem prestígio, avisa o cara!
+    // GATILHO DO PRESTIGE (NÍVEL 10)
     if (currentLevel == 10 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) _showPrestigeDialog(); // Abre a explicação automaticamente
+        if (mounted) _showPrestigeDialog(); 
       });
     }
 
-    // 2. O "Escudo" de Anúncios (8 Segundos)
+    // 2. O "Escudo" de Anúncios (8 Segundos de paz)
     if (!_isNoAdsPurchased) {
       Future.delayed(const Duration(seconds: 8), () {
         if (mounted) {
@@ -394,37 +351,49 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-
-
-    void _onPop() {
+  // --- LÓGICA DE CLIQUE COM ÁUDIO OTIMIZADO ---
+  void _onPop() {
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
-    if (!kIsWeb) Vibration.vibrate(duration: 15);
+    
+    if (!kIsWeb) {
+      // Vibração curta e segura
+      if (Vibration.hasVibrator() != null) {
+         Vibration.vibrate(duration: 15);
+      }
+    }
 
-    // --- LÓGICA DO GATILHO DE AD ---
+    // Gatilho de Ad
     if (_pendingAdTrigger) {
-      // Verifica se o anúncio está carregado e pronto
       if (_interstitialAd != null) {
-        // Pequeno delay de segurança para o som do 'pop' terminar
-        // e evitar clique acidental imediato (Safety Policy do AdMob)
         Future.delayed(const Duration(milliseconds: 300), () {
-           if (mounted && _interstitialAd != null) { // Checagem dupla
+           if (mounted && _interstitialAd != null) { 
              _interstitialAd!.show();
-             _loadInterstitialAd(); // Já carrega o próximo
+             _loadInterstitialAd(); 
            }
         });
       }
-      _pendingAdTrigger = false; // Desarma o gatilho imediatamente
+      _pendingAdTrigger = false; 
     }
   }
 
+  // --- SISTEMA DE ÁUDIO OTIMIZADO (POOL) ---
+  // Substitui a criação de novos players por reciclagem
+  void _playSound(String file) async {
+    if (_sfxPool.isEmpty) return; // Segurança
 
-  // --- CORREÇÃO DE ÁUDIO (Polifonia / Fire-and-Forget) ---
-  void _playSound(String file) {
-    // Cria uma nova instância para cada som, permitindo sobreposição (sem engasgo)
-    AudioPlayer().play(AssetSource('audio/$file'), volume: 0.6, mode: PlayerMode.lowLatency);
+    final player = _sfxPool[_poolIndex];
+    
+    // Se estiver tocando, para (opcional, mas bom pra sons curtos)
+    if (player.state == PlayerState.playing) {
+      await player.stop();
+    }
+    
+    player.play(AssetSource('audio/$file'), volume: 0.6);
+    
+    // Avança para o próximo player da fila circular
+    _poolIndex = (_poolIndex + 1) % _poolSize;
   }
-
 
   void _showTip(String message, {bool isImportant = false}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -458,7 +427,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             key.currentState!.pop();
             _onPop(); 
           }
-          break; 
+          break;
         }
       }
     }
@@ -531,6 +500,59 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
+  // --- PRESTIGE SYSTEM ---
+  void _doPrestige() {
+    _playSound('cash.wav');
+    setState(() {
+      prestigeLevel++;
+      money = 0;
+      totalEarnings = 0;
+      clickValue = 1;
+      autoClickRate = 0;
+      levelClick = 1;
+      levelAuto = 0;
+      costClickUpgrade = 50;
+      costAutoUpgrade = 100;
+      _coins.clear();
+      _isRaining = false;
+    });
+    _saveProgress();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).toInt()}%"),
+        backgroundColor: Colors.purpleAccent,
+        behavior: SnackBarBehavior.floating,
+      )
+    );
+  }
+
+  void _showPrestigeDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("👑 RENASCIMENTO"),
+        content: Text(
+          "O jogo está muito difícil?\n\n"
+          "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
+          "Atual: ${((prestigeMultiplier-1)*100).toInt()}%\n"
+          "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).toInt()}%"
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+            onPressed: () {
+              Navigator.pop(context);
+              _doPrestige();
+            },
+            child: const Text("RENASCER AGORA", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      )
+    );
+  }
+
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('money', money);
@@ -539,7 +561,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     await prefs.setInt('levelAuto', levelAuto);
     await prefs.setBool('no_ads', _isNoAdsPurchased);
     await prefs.setInt('last_seen', DateTime.now().millisecondsSinceEpoch);
-    await prefs.setInt('prestigeLevel', prestigeLevel); // Salva o renascimento
+    await prefs.setInt('prestigeLevel', prestigeLevel);
   }
 
   Future<void> _initGameData() async {
@@ -559,7 +581,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       
       _startAutoClicker();
     });
-
     if (!_isNoAdsPurchased) {
       _initBannerAd();
       _loadInterstitialAd();
@@ -571,16 +592,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       Future.delayed(const Duration(seconds: 1), () => _calculateAndShowOfflineEarnings(lastSeen));
     }
 
-    // --- NOVO: CHECAGEM PARA VETERANOS (Retroativa) ---
-    // Se o jogador atualizou o app e JÁ ESTÁ acima do nível 10, mostramos o aviso.
+    // Checagem para veteranos
     if (currentLevel >= 10 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 3), () { 
-        // Delay de 3s para dar tempo de carregar a UI e mostrar o ganho offline primeiro (se houver)
         if (mounted) _showPrestigeDialog(); 
       });
     }
   }
-
 
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
@@ -658,7 +676,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         )
       );
     });
-
     _rewardedAd = null;
     _isRewardedAdReady = false;
     _loadRewardedAd();
@@ -693,11 +710,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- SUBSTITUA ESTA COLUNA DA ESQUERDA INTEIRA ---
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start, 
                           children: [
-                            // 1. LINHA DO NÍVEL + BOTÃO DE PRESTIGE
                             Row(
                               children: [
                                 Text(
@@ -705,7 +720,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                   style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
                                 ),
                                 
-                                // O BOTÃO COROA (Aparece se Nível >= 10)
                                 if (currentLevel >= 10)
                                   GestureDetector(
                                     onTap: _showPrestigeDialog,
@@ -713,7 +727,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                       margin: const EdgeInsets.only(left: 8),
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: Colors.purpleAccent, // Roxo para destacar
+                                        color: Colors.purpleAccent,
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(color: Colors.purple.withOpacity(0.4), blurRadius: 4)
@@ -731,10 +745,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                               ],
                             ),
 
-                            // 2. TEXTO DA META (Logo abaixo)
                             Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                            
-                            // 3. DINHEIRO GRANDE
+                          
                             Row(
                               children: [
                                 const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 32),
@@ -749,7 +761,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                             ),
                           ],
                         ),
-                        // --- FIM DA COLUNA DA ESQUERDA ---
                         
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                           if (!_isNoAdsPurchased)
@@ -848,19 +859,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   Widget _buildStore() {
     return Container(
-      height: 170, // Altura fixa para manter a área de toque estável
+      height: 170, 
       padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: Offset(0, -3))],
       ),
-      // MUDANÇA 1: Trocamos ListView por Row para forçar a divisão de espaço
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch, // Estica os cards na altura
+        crossAxisAlignment: CrossAxisAlignment.stretch, 
         children: [
           // --- CARD 1: CLICK POWER ---
-          Expanded( // Expanded obriga o card a ocupar 1/3 do espaço disponível
+          Expanded( 
             child: _UpgradeCard(
               title: TranslationManager.translate('click_power'),
               level: levelClick,
@@ -870,7 +880,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               formatCost: formatMoney,
               onTap: () {
                 if (money >= costClickUpgrade) {
-                  _playSound('cash.wav'); // Som corrigido (fire-and-forget)
+                  _playSound('cash.wav');
                   setState(() {
                     money -= costClickUpgrade;
                     levelClick++;
@@ -885,10 +895,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             ),
           ),
           
-          const SizedBox(width: 8), // Espaço flexível entre cards
+          const SizedBox(width: 8), 
 
           // --- CARD 2: AUTO BOT ---
-          Expanded( // Ocupa o segundo 1/3
+          Expanded( 
             child: _UpgradeCard(
               title: TranslationManager.translate('auto_bot'),
               level: levelAuto,
@@ -1015,7 +1025,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 }
 
-// --- CLASSE BUBBLE WIDGET E PARTÍCULAS (MANTIDOS IGUAIS) ---
+// --- CLASSE BUBBLE WIDGET E PARTÍCULAS ---
 class BubbleWidget extends StatefulWidget {
   final Color activeColor;
   const BubbleWidget({super.key, required this.activeColor});
@@ -1026,8 +1036,7 @@ class BubbleWidget extends StatefulWidget {
 class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
-  double _rotationAngle = 0; 
-
+  double _rotationAngle = 0;
   @override
   void initState() {
     super.initState();
@@ -1073,7 +1082,7 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
                     widget.activeColor,
                   ],
                   stops: const [0.0, 0.4, 1.0]
-                ),
+              ),
             color: isPopped ? Colors.grey.withOpacity(0.05) : null,
             border: Border.all(
               color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.3), 
@@ -1101,14 +1110,12 @@ class _UpgradeCard extends StatelessWidget {
   final bool canBuy;
   final VoidCallback onTap;
   final String Function(double) formatCost;
-
   const _UpgradeCard({
-    super.key, // Adicionei super.key pra boas práticas
+    super.key, 
     required this.title, required this.level, required this.cost, 
     required this.icon, required this.canBuy, required this.onTap,
     required this.formatCost,
   });
-
   @override
   Widget build(BuildContext context) {
     return Material( 
@@ -1117,7 +1124,7 @@ class _UpgradeCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: const EdgeInsets.all(8), // Padding levemente reduzido
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: canBuy ? Colors.white : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(20),
@@ -1127,15 +1134,12 @@ class _UpgradeCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 1. Ícone que cresce (35% do espaço)
               Expanded(
                 flex: 4,
                 child: FittedBox(
                   child: Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey),
                 ),
               ),
-              
-              // 2. Títulos que crescem (25% do espaço)
               Expanded(
                 flex: 3,
                 child: Column(
@@ -1146,10 +1150,7 @@ class _UpgradeCard extends StatelessWidget {
                   ],
                 ),
               ),
-              
               const Spacer(flex: 1),
-
-              // 3. Botão de Preço que cresce (25% do espaço)
               Expanded(
                 flex: 3,
                 child: Container(
@@ -1159,7 +1160,7 @@ class _UpgradeCard extends StatelessWidget {
                     color: canBuy ? Colors.green : Colors.grey, 
                     borderRadius: BorderRadius.circular(8)
                   ),
-                  child: FittedBox( // O texto do preço vai se ajustar ao botão
+                  child: FittedBox( 
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -1179,10 +1180,9 @@ class _UpgradeCard extends StatelessWidget {
   }
 }
 
-
 class CoinParticle {
   double x = Random().nextDouble() * 400; 
-  double y = -50 - Random().nextDouble() * 200; 
+  double y = -50 - Random().nextDouble() * 200;
   double speed = 5 + Random().nextDouble() * 10; 
   double rotation = Random().nextDouble() * 2 * pi;
   Color color = Colors.amber;
@@ -1191,7 +1191,6 @@ class CoinParticle {
 class CoinRainPainter extends CustomPainter {
   final List<CoinParticle> coins;
   CoinRainPainter(this.coins);
-
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
