@@ -831,7 +831,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       ),
     );
   }
-
+}
 
 // --- CLASSE BUBBLE WIDGET E PARTÍCULAS (MANTIDOS IGUAIS) ---
 class BubbleWidget extends StatefulWidget {
