@@ -691,7 +691,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  Widget _buildStore() {
+    Widget _buildStore() {
     return Container(
       height: 170, 
       padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
@@ -750,64 +750,88 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             ),
           ),
           const SizedBox(width: 10),
-          // --- BLOCO NO ADS MELHORADO ---
+          
+          // --- BLOCO NO ADS CORRIGIDO ---
           if (!_isNoAdsPurchased)
-            GestureDetector(
-              onTap: _showComingSoon,
-              child: Container(
-                width: 145, // Aumentei um pouco a largura
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))],
-                ),
-                child: Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.block, color: Colors.white, size: 28),
-                          const SizedBox(height: 2),
-                          Text(TranslationManager.translate('no_ads'), style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 14)),
-                          const SizedBox(height: 2),
-                          // Preços melhor alinhados
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text("USD 9.99", style: TextStyle(color: Colors.white.withOpacity(0.7), decoration: TextDecoration.lineThrough, fontSize: 10)),
-                              SizedBox(width: 5),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
-                                child: const Text("\$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                              )
-                            ],
-                          )
-                        ],
-                      ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _showComingSoon,
+                borderRadius: BorderRadius.circular(20),
+                child: Ink(
+                  width: 135, // Largura ajustada
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFD700), Color(0xFFFFA000)], 
+                      begin: Alignment.topLeft, 
+                      end: Alignment.bottomRight
                     ),
-                    Positioned(
-                      top: 5, right: 5,
-                      child: Transform.rotate(
-                        angle: 0.2,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: const Text("-70%", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                    borderRadius: BorderRadius.circular(20), // Garante bordas redondas
+                    boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))],
+                  ),
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Espaçamento igual
+                          children: [
+                            const Icon(Icons.block_flipped, color: Colors.white, size: 32), // Ícone maior e mais limpo
+                            Column(
+                              children: [
+                                Text(
+                                  TranslationManager.translate('no_ads'), 
+                                  style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 13)
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade600, 
+                                    borderRadius: BorderRadius.circular(12)
+                                  ),
+                                  child: const Text(
+                                    "\$2.79", 
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)
+                                  ),
+                                ),
+                              ],
+                            )
+                          ],
                         ),
                       ),
-                    )
-                  ],
+                      Positioned(
+                        top: 8, right: 8, // Mais pra dentro pra não cortar
+                        child: Transform.rotate(
+                          angle: 0.2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white, 
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)]
+                            ),
+                            child: const Text(
+                              "-70%", 
+                              style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.w900)
+                            ),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
             ),
+            // Fim do Bloco No Ads
+            
+            // Espaço extra no final pra garantir scroll
+            const SizedBox(width: 20),
         ],
       ),
     );
   }
-}
+
 
 // --- CLASSE BUBBLE WIDGET E PARTÍCULAS (MANTIDOS IGUAIS) ---
 class BubbleWidget extends StatefulWidget {
