@@ -248,22 +248,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // O USUÁRIO SAIU DO APP
+      // O USUÁRIO SAIU (OU O ANÚNCIO ABRIU)
       _autoClickTimer?.cancel();
-      Vibration.cancel(); // <--- TRAVA DE SEGURANÇA: PARA DE VIBRAR IMEDIATAMENTE!
+      Vibration.cancel(); 
       
-      // Para todos os sons para não ficar tocando no fundo
+      // Pausa tudo
       for (var player in _sfxPool) {
         player.stop();
       }
       
       _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
+      // O USUÁRIO VOLTOU (OU O ANÚNCIO FECHOU)
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
       setState(() {});
+
+      // --- A CORREÇÃO MÁGICA ---
+      // Recria os sons que o anúncio "matou"
+      _regenerateAudioPool();
     }
   }
+
 
   @override
   void didChangeLocales(List<Locale>? locales) {
@@ -680,6 +686,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _isRewardedAdReady = false;
     _loadRewardedAd();
   }
+  
+    // --- NOVO MÉTODO: RESSUSCITA O SOM DEPOIS DO ANÚNCIO ---
+  void _regenerateAudioPool() {
+    // 1. Descarta os players antigos (que perderam a conexão)
+    for (var player in _sfxPool) {
+      try { player.dispose(); } catch (e) {
+        // Ignora erros de dispose se o player já estiver morto
+      }
+    }
+    _sfxPool.clear(); // Limpa a lista
+    
+    // 2. Cria novos players fresquinhos e prontos para o combate
+    for (int i = 0; i < _poolSize; i++) {
+      final player = AudioPlayer();
+      player.setPlayerMode(PlayerMode.lowLatency);
+      _sfxPool.add(player);
+    }
+    _poolIndex = 0; // Reseta o índice
+    // print("Audio Pool Regenerado com Sucesso!"); // Debug (opcional)
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -720,30 +747,38 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                   style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
                                 ),
                                 
+                                // O BOTÃO COROA (Versão Tappable & Maior)
+                                // O BOTÃO COROA (Versão Tappable & Maior)
                                 if (currentLevel >= 10)
-                                  GestureDetector(
-                                    onTap: _showPrestigeDialog,
-                                    child: Container(
-                                      margin: const EdgeInsets.only(left: 8),
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: Colors.purpleAccent,
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Material(
+                                      color: Colors.purpleAccent, // Cor do botão
+                                      borderRadius: BorderRadius.circular(12),
+                                      elevation: 4, // Sombra bonitinha
+                                      shadowColor: Colors.purple.withOpacity(0.4),
+                                      child: InkWell(
+                                        onTap: _showPrestigeDialog, // O clique funciona aqui
                                         borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(color: Colors.purple.withOpacity(0.4), blurRadius: 4)
-                                        ]
-                                      ),
-                                      child: Row(
-                                        children: const [
-                                           Icon(Icons.auto_awesome, size: 12, color: Colors.white),
-                                           SizedBox(width: 4),
-                                           Text("RESTART", style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold))
-                                        ],
+                                        child: Container(
+                                          // AUMENTAR A ÁREA DE TOQUE AQUI 👇
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), 
+                                          child: Row(
+                                            children: const [
+                                               Icon(Icons.auto_awesome, size: 14, color: Colors.white),
+                                               SizedBox(width: 4),
+                                               Text(
+                                                 "RESTART", 
+                                                 style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)
+                                               )
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   )
-                              ],
-                            ),
+
+
 
                             Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
                           
