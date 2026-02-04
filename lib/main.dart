@@ -601,7 +601,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
 
     // Checagem para veteranos
-    if (currentLevel >= 10 && prestigeLevel == 0) {
+    if (currentLevel >= 2 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 3), () { 
         if (mounted) _showPrestigeDialog(); 
       });
@@ -729,15 +729,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 ),
                                 
                                 // O BOTÃO COROA (Versão Nativa - À Prova de Falhas)
-                                if (currentLevel >= 10)
+                                if (currentLevel >= 2)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: SizedBox(
-                                      height: 28, // Força uma altura clicável
+                                      height: 28, 
                                       child: ElevatedButton.icon(
                                         onPressed: () {
-                                            // Debug visual: Printa no console e vibra para confirmar o toque
-                                            print("Botão Restart Clicado!"); 
                                             if (Vibration.hasVibrator() != null) Vibration.vibrate(duration: 50);
                                             _showPrestigeDialog();
                                         },
@@ -751,12 +749,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                           foregroundColor: Colors.white,
                                           elevation: 4,
                                           padding: const EdgeInsets.symmetric(horizontal: 10),
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Remove margens extras
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         ),
                                       ),
                                     ),
-                                  ),
+                                  )
+                              ],
+                            ),
 
                             Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
                           
