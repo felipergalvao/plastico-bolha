@@ -509,7 +509,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   // --- PRESTIGE SYSTEM ---
-  void _doPrestige() {
+    void _doPrestige() {
     _playSound('cash.wav');
     setState(() {
       prestigeLevel++;
@@ -526,9 +526,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     });
     _saveProgress();
     
+    // CORREÇÃO: Usamos .round() para arredondar 19.99% para 20%
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).toInt()}%"),
+        content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).round()}%"),
         backgroundColor: Colors.purpleAccent,
         behavior: SnackBarBehavior.floating,
       )
@@ -543,8 +544,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         content: Text(
           "O jogo está muito difícil?\n\n"
           "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
-          "Atual: ${((prestigeMultiplier-1)*100).toInt()}%\n"
-          "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).toInt()}%"
+          // CORREÇÃO AQUI: .round() em vez de .toInt()
+          "Atual: ${((prestigeMultiplier-1)*100).round()}%\n"
+          "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).round()}%"
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
