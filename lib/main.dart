@@ -603,7 +603,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
 
     // Checagem para veteranos
-    if (currentLevel >= 2 && prestigeLevel == 0) {
+    if (currentLevel >= 10 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 3), () { 
         if (mounted) _showPrestigeDialog(); 
       });
@@ -731,7 +731,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 ),
                                 
                                 // O BOTÃO COROA (Versão Nativa - À Prova de Falhas)
-                                if (currentLevel >= 2)
+                                if (currentLevel >= 10)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: SizedBox(
