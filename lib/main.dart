@@ -728,37 +728,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                   style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
                                 ),
                                 
-                                // O BOTÃO COROA (Versão Tappable & Maior)
+                                // O BOTÃO COROA (Versão Nativa - À Prova de Falhas)
                                 if (currentLevel >= 10)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
-                                    child: Material(
-                                      color: Colors.purpleAccent, // Cor do botão
-                                      borderRadius: BorderRadius.circular(12),
-                                      elevation: 4, 
-                                      shadowColor: Colors.purple.withOpacity(0.4),
-                                      child: InkWell(
-                                        onTap: _showPrestigeDialog, // O clique funciona aqui
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Container(
-                                          // ÁREA DE TOQUE GENEROSA
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), 
-                                          child: Row(
-                                            children: const [
-                                               Icon(Icons.auto_awesome, size: 14, color: Colors.white),
-                                               SizedBox(width: 4),
-                                               Text(
-                                                 "RESTART", 
-                                                 style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)
-                                               )
-                                            ],
-                                          ),
+                                    child: SizedBox(
+                                      height: 28, // Força uma altura clicável
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                            // Debug visual: Printa no console e vibra para confirmar o toque
+                                            print("Botão Restart Clicado!"); 
+                                            if (Vibration.hasVibrator() != null) Vibration.vibrate(duration: 50);
+                                            _showPrestigeDialog();
+                                        },
+                                        icon: const Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+                                        label: const Text(
+                                          "RESTART", 
+                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.purpleAccent,
+                                          foregroundColor: Colors.white,
+                                          elevation: 4,
+                                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Remove margens extras
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         ),
                                       ),
                                     ),
-                                  )
-                              ],
-                            ),
+                                  ),
 
                             Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
                           
