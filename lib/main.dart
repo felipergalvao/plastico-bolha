@@ -1,7 +1,7 @@
 ﻿import 'dart:async';
 import 'dart:math';
 import 'dart:ui'; 
-import 'dart:io'; // Para PlatformDispatcher funcionar corretamente
+import 'dart:io'; 
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -171,10 +171,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- AUDIO POOL OTIMIZADO (Correção de Lag) ---
+  // --- AUDIO POOL OTIMIZADO ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 10; // Limite de sons simultâneos para não travar a CPU
+  final int _poolSize = 10; 
 
   // --- Grid ---
   final int _columns = 5;
@@ -207,10 +207,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     });
 
     // --- INICIALIZA O POOL DE ÁUDIO ---
-    // Prepara os players na memória para uso rápido
     for (int i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency); // Modo otimizado para efeitos curtos
+      player.setPlayerMode(PlayerMode.lowLatency); 
       _sfxPool.add(player);
     }
 
@@ -236,7 +235,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
     
-    // Limpa a memória dos áudios
     for (var player in _sfxPool) {
       player.dispose();
     }
@@ -244,7 +242,26 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
-  // --- GERENCIAMENTO DE CICLO DE VIDA (Correção de Vibração Fantasma) ---
+  // --- NOVO MÉTODO: RESSUSCITA O SOM DEPOIS DO ANÚNCIO ---
+  void _regenerateAudioPool() {
+    // 1. Descarta os players antigos
+    for (var player in _sfxPool) {
+      try { player.dispose(); } catch (e) {
+        // Ignora erros
+      }
+    }
+    _sfxPool.clear(); 
+    
+    // 2. Cria novos players
+    for (int i = 0; i < _poolSize; i++) {
+      final player = AudioPlayer();
+      player.setPlayerMode(PlayerMode.lowLatency);
+      _sfxPool.add(player);
+    }
+    _poolIndex = 0;
+  }
+
+  // --- GERENCIAMENTO DE CICLO DE VIDA ---
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
@@ -252,7 +269,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _autoClickTimer?.cancel();
       Vibration.cancel(); 
       
-      // Pausa tudo
       for (var player in _sfxPool) {
         player.stop();
       }
@@ -269,7 +285,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _regenerateAudioPool();
     }
   }
-
 
   @override
   void didChangeLocales(List<Locale>? locales) {
@@ -329,25 +344,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- LÓGICA DE LEVEL UP COM PROTEÇÃO DE ANÚNCIO ---
   void _onLevelUp() {
     _saveProgress();
-    
-    // 1. Festa Visual
     _playSound('cash.wav');
     _triggerCoinRain(); 
     
     String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
     _showTip(msg, isImportant: true);
 
-    // GATILHO DO PRESTIGE (NÍVEL 10)
     if (currentLevel == 10 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) _showPrestigeDialog(); 
       });
     }
 
-    // 2. O "Escudo" de Anúncios (8 Segundos de paz)
     if (!_isNoAdsPurchased) {
       Future.delayed(const Duration(seconds: 8), () {
         if (mounted) {
@@ -357,19 +367,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- LÓGICA DE CLIQUE COM ÁUDIO OTIMIZADO ---
   void _onPop() {
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
     
     if (!kIsWeb) {
-      // Vibração curta e segura
       if (Vibration.hasVibrator() != null) {
          Vibration.vibrate(duration: 15);
       }
     }
 
-    // Gatilho de Ad
     if (_pendingAdTrigger) {
       if (_interstitialAd != null) {
         Future.delayed(const Duration(milliseconds: 300), () {
@@ -383,21 +390,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- SISTEMA DE ÁUDIO OTIMIZADO (POOL) ---
-  // Substitui a criação de novos players por reciclagem
   void _playSound(String file) async {
-    if (_sfxPool.isEmpty) return; // Segurança
+    if (_sfxPool.isEmpty) return; 
 
     final player = _sfxPool[_poolIndex];
     
-    // Se estiver tocando, para (opcional, mas bom pra sons curtos)
     if (player.state == PlayerState.playing) {
       await player.stop();
     }
     
     player.play(AssetSource('audio/$file'), volume: 0.6);
-    
-    // Avança para o próximo player da fila circular
     _poolIndex = (_poolIndex + 1) % _poolSize;
   }
 
@@ -686,27 +688,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _isRewardedAdReady = false;
     _loadRewardedAd();
   }
-  
-    // --- NOVO MÉTODO: RESSUSCITA O SOM DEPOIS DO ANÚNCIO ---
-  void _regenerateAudioPool() {
-    // 1. Descarta os players antigos (que perderam a conexão)
-    for (var player in _sfxPool) {
-      try { player.dispose(); } catch (e) {
-        // Ignora erros de dispose se o player já estiver morto
-      }
-    }
-    _sfxPool.clear(); // Limpa a lista
-    
-    // 2. Cria novos players fresquinhos e prontos para o combate
-    for (int i = 0; i < _poolSize; i++) {
-      final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency);
-      _sfxPool.add(player);
-    }
-    _poolIndex = 0; // Reseta o índice
-    // print("Audio Pool Regenerado com Sucesso!"); // Debug (opcional)
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -748,20 +729,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 ),
                                 
                                 // O BOTÃO COROA (Versão Tappable & Maior)
-                                // O BOTÃO COROA (Versão Tappable & Maior)
                                 if (currentLevel >= 10)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: Material(
                                       color: Colors.purpleAccent, // Cor do botão
                                       borderRadius: BorderRadius.circular(12),
-                                      elevation: 4, // Sombra bonitinha
+                                      elevation: 4, 
                                       shadowColor: Colors.purple.withOpacity(0.4),
                                       child: InkWell(
                                         onTap: _showPrestigeDialog, // O clique funciona aqui
                                         borderRadius: BorderRadius.circular(12),
                                         child: Container(
-                                          // AUMENTAR A ÁREA DE TOQUE AQUI 👇
+                                          // ÁREA DE TOQUE GENEROSA
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), 
                                           child: Row(
                                             children: const [
@@ -777,8 +757,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                       ),
                                     ),
                                   )
-
-
+                              ],
+                            ),
 
                             Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
                           
@@ -904,7 +884,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch, 
         children: [
-          // --- CARD 1: CLICK POWER ---
           Expanded( 
             child: _UpgradeCard(
               title: TranslationManager.translate('click_power'),
@@ -932,7 +911,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
           
           const SizedBox(width: 8), 
 
-          // --- CARD 2: AUTO BOT ---
           Expanded( 
             child: _UpgradeCard(
               title: TranslationManager.translate('auto_bot'),
@@ -961,7 +939,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
           const SizedBox(width: 8),
 
-          // --- CARD 3: NO ADS (100% ELÁSTICO) ---
           if (!_isNoAdsPurchased)
             Expanded(
               child: Material(
@@ -988,7 +965,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Ícone e Texto (Topo)
                               Expanded(
                                 flex: 6,
                                 child: Column(
@@ -1013,7 +989,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                               
                               const Spacer(flex: 1),
 
-                              // Botão Preço (Base)
                               Expanded(
                                 flex: 3,
                                 child: Container(
@@ -1036,7 +1011,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                             ],
                           ),
                         ),
-                        // Tag (Fixa, pois deve ser discreta)
                         Positioned(
                           top: 0, right: 0,
                           child: Container(
@@ -1060,7 +1034,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 }
 
-// --- CLASSE BUBBLE WIDGET E PARTÍCULAS ---
 class BubbleWidget extends StatefulWidget {
   final Color activeColor;
   const BubbleWidget({super.key, required this.activeColor});
