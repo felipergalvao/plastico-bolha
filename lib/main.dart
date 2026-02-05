@@ -731,16 +731,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 ),
                                 
                                 // O BOTÃO COROA (Versão Nativa - À Prova de Falhas)
+                                // --- INICIO DO BOTÃO RESTART BLINDADO ---
                                 if (currentLevel >= 10)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: SizedBox(
                                       height: 28, 
                                       child: ElevatedButton.icon(
+                                        // AQUI ESTÁ A MÁGICA (ONPRESSED SEGURO) 👇
                                         onPressed: () {
-                                            if (Vibration.hasVibrator() != null) Vibration.vibrate(duration: 50);
-                                            _showPrestigeDialog();
+                                            // 1. Tenta vibrar (se falhar, o jogo NÃO trava)
+                                            try {
+                                              Vibration.vibrate(duration: 50);
+                                            } catch (e) {
+                                              debugPrint("Erro ao vibrar (ignorado): $e");
+                                            }
+
+                                            // 2. Abre o diálogo no próximo frame (evita travar o clique)
+                                            Future.delayed(Duration.zero, () {
+                                              _showPrestigeDialog();
+                                            });
                                         },
+                                        // FIM DA MÁGICA 👆
+                                        
                                         icon: const Icon(Icons.auto_awesome, size: 12, color: Colors.white),
                                         label: const Text(
                                           "RESTART", 
@@ -757,6 +770,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                       ),
                                     ),
                                   )
+                                // --- FIM DO BOTÃO RESTART ---
                               ],
                             ),
 
