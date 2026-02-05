@@ -615,7 +615,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       Future.delayed(const Duration(seconds: 1), () => _calculateAndShowOfflineEarnings(lastSeen));
     }
 
-    if (currentLevel >= 10 && prestigeLevel == 0) {
+    if (currentLevel >= 1 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 3), () { 
         if (mounted) _showPrestigeDialog(); 
       });
@@ -758,7 +758,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                   style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
                                 ),
                                 
-                                if (currentLevel >= 10)
+                                if (currentLevel >= 1)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: SizedBox(
