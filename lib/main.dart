@@ -164,7 +164,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
   bool _isRewardedAdReady = false;
-  int _interstitialLoadAttempts = 0; // Controle de tentativas
+  int _interstitialLoadAttempts = 0;
 
   Timer? _autoClickTimer;
   bool _hasShownFirstTip = false;
@@ -175,10 +175,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- AUDIO POOL LEVE ---
+  // --- AUDIO POOL ROBUSTO ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 5; 
+  final int _poolSize = 4; // Mantendo leve para evitar crash
 
   // --- Grid ---
   final int _columns = 5;
@@ -210,12 +210,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       }
     });
 
-    // --- INICIALIZA O POOL DE ÁUDIO ---
-    for (int i = 0; i < _poolSize; i++) {
-      final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency); 
-      _sfxPool.add(player);
-    }
+    _initAudioPool(); // Inicia o audio separadamente
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
@@ -228,6 +223,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         _hasShownFirstTip = true;
       }
     });
+  }
+
+  void _initAudioPool() {
+    _sfxPool.clear();
+    for (int i = 0; i < _poolSize; i++) {
+      final player = AudioPlayer();
+      player.setPlayerMode(PlayerMode.lowLatency); 
+      _sfxPool.add(player);
+    }
   }
 
   @override
@@ -246,18 +250,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
-  // --- REGENERAÇÃO DE ÁUDIO ---
+  // --- REGENERAÇÃO DE ÁUDIO FORÇADA ---
   void _regenerateAudioPool() {
+    print("Recriando sistema de áudio..."); // Debug
     for (var player in _sfxPool) {
       try { player.dispose(); } catch (e) { }
     }
     _sfxPool.clear(); 
-    
-    for (int i = 0; i < _poolSize; i++) {
-      final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency);
-      _sfxPool.add(player);
-    }
+    _initAudioPool();
     _poolIndex = 0;
   }
 
@@ -267,17 +267,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _autoClickTimer?.cancel();
       Vibration.cancel(); 
-      
+      // Paramos o som, mas não damos dispose aqui
       for (var player in _sfxPool) {
         player.stop();
       }
-      
       _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
-      setState(() {});
+      // Força a regeneração ao voltar para o app
       _regenerateAudioPool();
+      setState(() {});
     }
   }
 
@@ -354,10 +354,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
 
     if (!_isNoAdsPurchased) {
-      // Carrega um novo se estiver faltando
       if (_interstitialAd == null) _loadInterstitialAd();
 
-      Future.delayed(const Duration(seconds: 8), () {
+      Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
            _pendingAdTrigger = true; 
         }
@@ -373,36 +372,40 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
        try { Vibration.vibrate(duration: 15); } catch(e) {}
     }
 
-    // --- LÓGICA DE ANÚNCIO CORRIGIDA (V1.0.9) ---
+    // --- LÓGICA DE ANÚNCIO ---
     if (_pendingAdTrigger) {
-      // Só tenta mostrar se o anúncio existe
       if (_interstitialAd != null) {
         Future.delayed(const Duration(milliseconds: 300), () {
            if (mounted && _interstitialAd != null) { 
              _interstitialAd!.show();
-             _pendingAdTrigger = false; // Só consome o gatilho se mostrar
-             _interstitialAd = null; // Limpa para não reusar
-             _loadInterstitialAd(); // Já busca o próximo
+             _pendingAdTrigger = false; 
+             // NÃO limpamos a variável aqui, quem limpa é o callback
            }
         });
       } else {
-        // Se não tem anúncio, tenta carregar de novo mas NÃO consome o gatilho.
-        // O jogador vai continuar clicando e, quando carregar, ele vê.
         _loadInterstitialAd();
       }
     }
   }
 
   void _playSound(String file) async {
-    if (_sfxPool.isEmpty) return; 
-
-    final player = _sfxPool[_poolIndex];
-    if (player.state == PlayerState.playing) {
-      await player.stop();
+    if (_sfxPool.isEmpty) {
+        // Se o pool morreu, recria na hora
+        _initAudioPool();
     }
     
-    player.play(AssetSource('audio/$file'), volume: 0.6);
-    _poolIndex = (_poolIndex + 1) % _poolSize;
+    // Tenta tocar seguro
+    try {
+        final player = _sfxPool[_poolIndex];
+        if (player.state == PlayerState.playing) {
+           await player.stop();
+        }
+        player.play(AssetSource('audio/$file'), volume: 0.6);
+        _poolIndex = (_poolIndex + 1) % _poolSize;
+    } catch (e) {
+        // Se der erro, tenta recriar o pool para o próximo clique
+        _regenerateAudioPool();
+    }
   }
 
   void _showTip(String message, {bool isImportant = false}) {
@@ -538,28 +541,38 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _showPrestigeDialog() {
+    // CÁLCULO SEGURO DAS VARIÁVEIS ANTES DE EXIBIR
+    final currentBonus = ((prestigeMultiplier - 1.0) * 100).round();
+    final nextBonus = currentBonus + 20;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("👑 RENASCIMENTO"),
-        content: Text(
-          "O jogo está muito difícil?\n\n"
-          "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
-          "Atual: ${((prestigeMultiplier-1)*100).round()}%\n"
-          "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).round()}%"
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-            onPressed: () {
-              Navigator.pop(context);
-              _doPrestige();
-            },
-            child: const Text("RENASCER AGORA", style: TextStyle(color: Colors.white)),
-          )
-        ],
-      )
+      barrierDismissible: true, // Permite fechar clicando fora
+      builder: (BuildContext ctx) { // Usando um builder explícito
+        return AlertDialog(
+          title: const Text("👑 RENASCIMENTO"),
+          content: Text(
+            "O jogo está muito difícil?\n\n"
+            "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
+            "Atual: $currentBonus%\n"
+            "Após Renascer: $nextBonus%"
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(), 
+                child: const Text("Cancelar")
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _doPrestige(); // Chama a função lógica
+              },
+              child: const Text("RENASCER AGORA", style: TextStyle(color: Colors.white)),
+            )
+          ],
+        );
+      }
     );
   }
 
@@ -622,11 +635,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     )..load();
   }
 
-  // --- CARREGAMENTO DE INTERSTITIAL MELHORADO ---
+  // --- INTERSTITIAL AD (Com Force Audio Respawn) ---
   void _loadInterstitialAd() {
     if (_isNoAdsPurchased) return;
-    
-    // Evita recarregar se já existe
     if (_interstitialAd != null) return;
 
     InterstitialAd.load(
@@ -635,12 +646,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
-          _interstitialLoadAttempts = 0; // Reseta contador de erro
+          _interstitialLoadAttempts = 0; 
           _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-              _interstitialAd = null; // Limpa variável
-              _loadInterstitialAd(); // Carrega o próximo imediatamente
+              _interstitialAd = null; 
+              // AQUI É O PULO DO GATO: Ressuscita o som assim que o ad fecha
+              _regenerateAudioPool();
+              _loadInterstitialAd(); 
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
@@ -651,7 +664,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         },
         onAdFailedToLoad: (error) {
           _interstitialAd = null;
-          // Tenta de novo com delay exponencial (se falhar, tenta dps de 2s, 4s...)
           _interstitialLoadAttempts++;
           if (_interstitialLoadAttempts < 5) {
              Future.delayed(Duration(seconds: _interstitialLoadAttempts * 2), _loadInterstitialAd);
@@ -700,8 +712,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         )
       );
     });
-    // Se falhar o reward (AdGuard), o SDK geralmente chama onAdFailedToShow
-    // Mas aqui garantimos a limpeza
+    // O som também pode morrer aqui, então resetamos o pool por segurança
+    _regenerateAudioPool();
     _rewardedAd = null;
     _isRewardedAdReady = false;
     _loadRewardedAd();
@@ -752,16 +764,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                     child: SizedBox(
                                       height: 28, 
                                       child: ElevatedButton.icon(
+                                        // --- BOTÃO SIMPLIFICADO E DIRETO ---
                                         onPressed: () {
-                                            try {
-                                              Vibration.vibrate(duration: 50);
-                                            } catch (e) {
-                                              debugPrint("Erro Vibração: $e");
+                                            // Apenas vibra se seguro, sem try/catch complexo
+                                            if (!kIsWeb) {
+                                                try { Vibration.vibrate(duration: 50); } catch (_) {}
                                             }
-
-                                            Future.delayed(Duration.zero, () {
-                                              _showPrestigeDialog();
-                                            });
+                                            // Chama o diálogo DIRETAMENTE. Sem delay, sem frescura.
+                                            _showPrestigeDialog();
                                         },
                                         icon: const Icon(Icons.auto_awesome, size: 12, color: Colors.white),
                                         label: const Text(
