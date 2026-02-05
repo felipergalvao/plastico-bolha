@@ -171,10 +171,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- AUDIO POOL OTIMIZADO ---
+  // --- AUDIO POOL LEVE (Correção para Celulares Antigos) ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 10; 
+  final int _poolSize = 5; // Reduzido para 5 para economizar memória RAM
 
   // --- Grid ---
   final int _columns = 5;
@@ -242,17 +242,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
-  // --- NOVO MÉTODO: RESSUSCITA O SOM DEPOIS DO ANÚNCIO ---
+  // --- REGENERAÇÃO DE ÁUDIO (Pos-Anúncio) ---
   void _regenerateAudioPool() {
-    // 1. Descarta os players antigos
     for (var player in _sfxPool) {
-      try { player.dispose(); } catch (e) {
-        // Ignora erros
-      }
+      try { player.dispose(); } catch (e) { }
     }
     _sfxPool.clear(); 
     
-    // 2. Cria novos players
     for (int i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
       player.setPlayerMode(PlayerMode.lowLatency);
@@ -275,13 +271,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       
       _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
-      // O USUÁRIO VOLTOU (OU O ANÚNCIO FECHOU)
+      // O USUÁRIO VOLTOU
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
       setState(() {});
 
-      // --- A CORREÇÃO MÁGICA ---
-      // Recria os sons que o anúncio "matou"
+      // Ressuscita o som
       _regenerateAudioPool();
     }
   }
@@ -371,10 +366,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
     
+    // VIBRAÇÃO SEGURA
     if (!kIsWeb) {
-      if (Vibration.hasVibrator() != null) {
-         Vibration.vibrate(duration: 15);
-      }
+       try { Vibration.vibrate(duration: 15); } catch(e) {}
     }
 
     if (_pendingAdTrigger) {
@@ -390,11 +384,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  // --- AUDIO POOL LOGIC (Corrigido) ---
   void _playSound(String file) async {
     if (_sfxPool.isEmpty) return; 
 
     final player = _sfxPool[_poolIndex];
-    
     if (player.state == PlayerState.playing) {
       await player.stop();
     }
@@ -509,7 +503,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   // --- PRESTIGE SYSTEM ---
-    void _doPrestige() {
+  void _doPrestige() {
     _playSound('cash.wav');
     setState(() {
       prestigeLevel++;
@@ -526,7 +520,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     });
     _saveProgress();
     
-    // CORREÇÃO: Usamos .round() para arredondar 19.99% para 20%
+    // ARREDONDAMENTO CORRIGIDO (round)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).round()}%"),
@@ -544,7 +538,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         content: Text(
           "O jogo está muito difícil?\n\n"
           "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
-          // CORREÇÃO AQUI: .round() em vez de .toInt()
+          // ARREDONDAMENTO CORRIGIDO
           "Atual: ${((prestigeMultiplier-1)*100).round()}%\n"
           "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).round()}%"
         ),
@@ -730,30 +724,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                   style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
                                 ),
                                 
-                                // O BOTÃO COROA (Versão Nativa - À Prova de Falhas)
-                                // --- INICIO DO BOTÃO RESTART BLINDADO ---
+                                // BOTÃO BLINDADO (Try/Catch + Delay Zero)
                                 if (currentLevel >= 10)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: SizedBox(
                                       height: 28, 
                                       child: ElevatedButton.icon(
-                                        // AQUI ESTÁ A MÁGICA (ONPRESSED SEGURO) 👇
                                         onPressed: () {
-                                            // 1. Tenta vibrar (se falhar, o jogo NÃO trava)
                                             try {
                                               Vibration.vibrate(duration: 50);
                                             } catch (e) {
-                                              debugPrint("Erro ao vibrar (ignorado): $e");
+                                              debugPrint("Erro Vibração: $e");
                                             }
 
-                                            // 2. Abre o diálogo no próximo frame (evita travar o clique)
                                             Future.delayed(Duration.zero, () {
                                               _showPrestigeDialog();
                                             });
                                         },
-                                        // FIM DA MÁGICA 👆
-                                        
                                         icon: const Icon(Icons.auto_awesome, size: 12, color: Colors.white),
                                         label: const Text(
                                           "RESTART", 
@@ -770,7 +758,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                       ),
                                     ),
                                   )
-                                // --- FIM DO BOTÃO RESTART ---
                               ],
                             ),
 
