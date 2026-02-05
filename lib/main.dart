@@ -47,6 +47,7 @@ class TranslationManager {
       'insufficient_funds': 'Insufficient funds!',
       'more_coins': 'Collect more coins!',
       'bonus_loading': '...',
+      'ad_error': 'Video unavailable (Check connection)',
     },
     'pt': {
       'app_title': 'Plástico Bolha Tycoon',
@@ -72,6 +73,7 @@ class TranslationManager {
       'insufficient_funds': 'Moedas insuficientes!',
       'more_coins': 'Junte mais moedas!',
       'bonus_loading': '...',
+      'ad_error': 'Vídeo indisponível (Verifique conexão)',
     },
     'es': {
       'app_title': 'Plástico Burbuja Tycoon',
@@ -97,6 +99,7 @@ class TranslationManager {
       'insufficient_funds': '¡Fondos insuficientes!',
       'more_coins': '¡Consigue más monedas!',
       'bonus_loading': '...',
+      'ad_error': 'Video no disponible (Verificar conexión)',
     }
   };
 
@@ -161,6 +164,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
   bool _isRewardedAdReady = false;
+  int _interstitialLoadAttempts = 0; // Controle de tentativas
 
   Timer? _autoClickTimer;
   bool _hasShownFirstTip = false;
@@ -171,10 +175,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- AUDIO POOL LEVE (Correção para Celulares Antigos) ---
+  // --- AUDIO POOL LEVE ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 5; // Reduzido para 5 para economizar memória RAM
+  final int _poolSize = 5; 
 
   // --- Grid ---
   final int _columns = 5;
@@ -242,7 +246,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
-  // --- REGENERAÇÃO DE ÁUDIO (Pos-Anúncio) ---
+  // --- REGENERAÇÃO DE ÁUDIO ---
   void _regenerateAudioPool() {
     for (var player in _sfxPool) {
       try { player.dispose(); } catch (e) { }
@@ -261,7 +265,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // O USUÁRIO SAIU (OU O ANÚNCIO ABRIU)
       _autoClickTimer?.cancel();
       Vibration.cancel(); 
       
@@ -271,12 +274,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       
       _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
-      // O USUÁRIO VOLTOU
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
       setState(() {});
-
-      // Ressuscita o som
       _regenerateAudioPool();
     }
   }
@@ -354,6 +354,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
 
     if (!_isNoAdsPurchased) {
+      // Carrega um novo se estiver faltando
+      if (_interstitialAd == null) _loadInterstitialAd();
+
       Future.delayed(const Duration(seconds: 8), () {
         if (mounted) {
            _pendingAdTrigger = true; 
@@ -366,25 +369,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
     
-    // VIBRAÇÃO SEGURA
     if (!kIsWeb) {
        try { Vibration.vibrate(duration: 15); } catch(e) {}
     }
 
+    // --- LÓGICA DE ANÚNCIO CORRIGIDA (V1.0.9) ---
     if (_pendingAdTrigger) {
+      // Só tenta mostrar se o anúncio existe
       if (_interstitialAd != null) {
         Future.delayed(const Duration(milliseconds: 300), () {
            if (mounted && _interstitialAd != null) { 
              _interstitialAd!.show();
-             _loadInterstitialAd(); 
+             _pendingAdTrigger = false; // Só consome o gatilho se mostrar
+             _interstitialAd = null; // Limpa para não reusar
+             _loadInterstitialAd(); // Já busca o próximo
            }
         });
+      } else {
+        // Se não tem anúncio, tenta carregar de novo mas NÃO consome o gatilho.
+        // O jogador vai continuar clicando e, quando carregar, ele vê.
+        _loadInterstitialAd();
       }
-      _pendingAdTrigger = false; 
     }
   }
 
-  // --- AUDIO POOL LOGIC (Corrigido) ---
   void _playSound(String file) async {
     if (_sfxPool.isEmpty) return; 
 
@@ -520,7 +528,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     });
     _saveProgress();
     
-    // ARREDONDAMENTO CORRIGIDO (round)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).round()}%"),
@@ -538,7 +545,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         content: Text(
           "O jogo está muito difícil?\n\n"
           "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
-          // ARREDONDAMENTO CORRIGIDO
           "Atual: ${((prestigeMultiplier-1)*100).round()}%\n"
           "Após Renascer: ${((prestigeMultiplier-1)*100 + 20).round()}%"
         ),
@@ -596,7 +602,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       Future.delayed(const Duration(seconds: 1), () => _calculateAndShowOfflineEarnings(lastSeen));
     }
 
-    // Checagem para veteranos
     if (currentLevel >= 10 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 3), () { 
         if (mounted) _showPrestigeDialog(); 
@@ -617,26 +622,41 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     )..load();
   }
 
+  // --- CARREGAMENTO DE INTERSTITIAL MELHORADO ---
   void _loadInterstitialAd() {
     if (_isNoAdsPurchased) return;
+    
+    // Evita recarregar se já existe
+    if (_interstitialAd != null) return;
+
     InterstitialAd.load(
       adUnitId: 'ca-app-pub-3940256099942544/1033173712', 
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
+          _interstitialLoadAttempts = 0; // Reseta contador de erro
           _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-              _loadInterstitialAd();
+              _interstitialAd = null; // Limpa variável
+              _loadInterstitialAd(); // Carrega o próximo imediatamente
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
+              _interstitialAd = null;
               _loadInterstitialAd();
             },
           );
         },
-        onAdFailedToLoad: (error) {},
+        onAdFailedToLoad: (error) {
+          _interstitialAd = null;
+          // Tenta de novo com delay exponencial (se falhar, tenta dps de 2s, 4s...)
+          _interstitialLoadAttempts++;
+          if (_interstitialLoadAttempts < 5) {
+             Future.delayed(Duration(seconds: _interstitialLoadAttempts * 2), _loadInterstitialAd);
+          }
+        },
       ),
     );
   }
@@ -680,6 +700,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         )
       );
     });
+    // Se falhar o reward (AdGuard), o SDK geralmente chama onAdFailedToShow
+    // Mas aqui garantimos a limpeza
     _rewardedAd = null;
     _isRewardedAdReady = false;
     _loadRewardedAd();
@@ -724,7 +746,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                   style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
                                 ),
                                 
-                                // BOTÃO BLINDADO (Try/Catch + Delay Zero)
                                 if (currentLevel >= 10)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
