@@ -11,6 +11,9 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+// --- CHAVE MESTRA DE NAVEGAÇÃO (A SALVAÇÃO) ---
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
@@ -114,6 +117,8 @@ class BubbleTycoonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // CONECTANDO A CHAVE MESTRA AQUI 👇
+      navigatorKey: navigatorKey,
       title: 'Bubble Tycoon',
       debugShowCheckedModeBanner: false,
       supportedLocales: const [
@@ -178,7 +183,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   // --- AUDIO POOL ROBUSTO ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 4; // Mantendo leve para evitar crash
+  final int _poolSize = 4;
 
   // --- Grid ---
   final int _columns = 5;
@@ -210,7 +215,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       }
     });
 
-    _initAudioPool(); // Inicia o audio separadamente
+    _initAudioPool(); 
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
@@ -252,7 +257,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   // --- REGENERAÇÃO DE ÁUDIO FORÇADA ---
   void _regenerateAudioPool() {
-    print("Recriando sistema de áudio..."); // Debug
+    print("Recriando sistema de áudio..."); 
     for (var player in _sfxPool) {
       try { player.dispose(); } catch (e) { }
     }
@@ -267,7 +272,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _autoClickTimer?.cancel();
       Vibration.cancel(); 
-      // Paramos o som, mas não damos dispose aqui
       for (var player in _sfxPool) {
         player.stop();
       }
@@ -372,14 +376,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
        try { Vibration.vibrate(duration: 15); } catch(e) {}
     }
 
-    // --- LÓGICA DE ANÚNCIO ---
     if (_pendingAdTrigger) {
       if (_interstitialAd != null) {
         Future.delayed(const Duration(milliseconds: 300), () {
            if (mounted && _interstitialAd != null) { 
              _interstitialAd!.show();
              _pendingAdTrigger = false; 
-             // NÃO limpamos a variável aqui, quem limpa é o callback
            }
         });
       } else {
@@ -390,11 +392,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _playSound(String file) async {
     if (_sfxPool.isEmpty) {
-        // Se o pool morreu, recria na hora
         _initAudioPool();
     }
     
-    // Tenta tocar seguro
     try {
         final player = _sfxPool[_poolIndex];
         if (player.state == PlayerState.playing) {
@@ -403,12 +403,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         player.play(AssetSource('audio/$file'), volume: 0.6);
         _poolIndex = (_poolIndex + 1) % _poolSize;
     } catch (e) {
-        // Se der erro, tenta recriar o pool para o próximo clique
         _regenerateAudioPool();
     }
   }
 
   void _showTip(String message, {bool isImportant = false}) {
+    // Usa navigatorKey para garantir contexto válido
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
+
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -469,6 +472,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       if (secondsPassed > 86400) secondsPassed = 86400;
       double earned = secondsPassed * autoClickRate;
       
+      // Usa navigatorKey para diálogo seguro
+      final context = navigatorKey.currentContext;
+      if (context == null) return;
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -501,6 +508,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _showComingSoon() {
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -531,24 +541,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     });
     _saveProgress();
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).round()}%"),
-        backgroundColor: Colors.purpleAccent,
-        behavior: SnackBarBehavior.floating,
-      )
-    );
+    // SnackBar Seguro
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).round()}%"),
+          backgroundColor: Colors.purpleAccent,
+          behavior: SnackBarBehavior.floating,
+        )
+      );
+    }
   }
 
   void _showPrestigeDialog() {
-    // CÁLCULO SEGURO DAS VARIÁVEIS ANTES DE EXIBIR
+    // --- USO DA CHAVE MESTRA (SOLUÇÃO) ---
+    // Em vez de usar o context local (que pode estar sujo ou perdido), usamos o GlobalKey.
+    final context = navigatorKey.currentContext;
+    
+    // Se por milagre o contexto for nulo, abortamos sem crashar.
+    if (context == null) return;
+
     final currentBonus = ((prestigeMultiplier - 1.0) * 100).round();
     final nextBonus = currentBonus + 20;
 
     showDialog(
       context: context,
-      barrierDismissible: true, // Permite fechar clicando fora
-      builder: (BuildContext ctx) { // Usando um builder explícito
+      barrierDismissible: true, 
+      builder: (BuildContext ctx) { 
         return AlertDialog(
           title: const Text("👑 RENASCIMENTO"),
           content: Text(
@@ -566,7 +586,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
               style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
               onPressed: () {
                 Navigator.of(ctx).pop();
-                _doPrestige(); // Chama a função lógica
+                _doPrestige(); 
               },
               child: const Text("RENASCER AGORA", style: TextStyle(color: Colors.white)),
             )
@@ -635,7 +655,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     )..load();
   }
 
-  // --- INTERSTITIAL AD (Com Force Audio Respawn) ---
   void _loadInterstitialAd() {
     if (_isNoAdsPurchased) return;
     if (_interstitialAd != null) return;
@@ -651,7 +670,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
               _interstitialAd = null; 
-              // AQUI É O PULO DO GATO: Ressuscita o som assim que o ad fecha
+              // FORCE AUDIO RESPAWN (Correção do som sumindo)
               _regenerateAudioPool();
               _loadInterstitialAd(); 
             },
@@ -703,16 +722,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _addMoney(bonus);
       _playSound('cash.wav');
       _triggerCoinRain(); 
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: Text(TranslationManager.translate('reward_title')),
-          content: Text(TranslationManager.translate('reward_msg').replaceAll('@amount', formatMoney(bonus))),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
-        )
-      );
+      // Dialogo seguro via chave mestra
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(TranslationManager.translate('reward_title')),
+            content: Text(TranslationManager.translate('reward_msg').replaceAll('@amount', formatMoney(bonus))),
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
+          )
+        );
+      }
     });
-    // O som também pode morrer aqui, então resetamos o pool por segurança
+    
     _regenerateAudioPool();
     _rewardedAd = null;
     _isRewardedAdReady = false;
@@ -764,13 +787,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                     child: SizedBox(
                                       height: 28, 
                                       child: ElevatedButton.icon(
-                                        // --- BOTÃO SIMPLIFICADO E DIRETO ---
                                         onPressed: () {
-                                            // Apenas vibra se seguro, sem try/catch complexo
                                             if (!kIsWeb) {
                                                 try { Vibration.vibrate(duration: 50); } catch (_) {}
                                             }
-                                            // Chama o diálogo DIRETAMENTE. Sem delay, sem frescura.
+                                            // A CHAMADA AGORA É SEGURA (Via Chave Mestra)
                                             _showPrestigeDialog();
                                         },
                                         icon: const Icon(Icons.auto_awesome, size: 12, color: Colors.white),
