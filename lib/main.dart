@@ -11,8 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// --- CHAVE MESTRA DE NAVEGAÇÃO (A SALVAÇÃO) ---
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+// VERSÃO 1.1.0 - MANUAL STACK (SEM NAVIGATOR KEY)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,88 +23,11 @@ class TranslationManager {
   static String get languageCode {
     return PlatformDispatcher.instance.locale.languageCode;
   }
-
   static const Map<String, Map<String, String>> _localizedValues = {
-    'en': {
-      'app_title': 'Bubble Wrap Tycoon',
-      'tip_slide': 'Slide your finger to pop multiple bubbles!',
-      'tip_shop': 'Tip: Go to the Shop and upgrade your click!',
-      'level_up': 'LEVEL UP!\nLevel @level reached!',
-      'next_goal': 'Level @next in @percent%',
-      'welcome_back': 'Welcome back!',
-      'offline_work': 'Your Auto Bot worked for @seconds s.',
-      'collect_all': 'COLLECT ALL',
-      'coming_soon_title': 'Coming Soon',
-      'coming_soon_msg': 'This feature will be available once the app is approved on Play Store!',
-      'understood': 'Got it',
-      'loading_ad': 'Loading ad... Try again in 5s.',
-      'reward_title': 'Reward Received!',
-      'reward_msg': 'You earned @amount coins!',
-      'level': 'LEVEL',
-      'auto_bot': 'AUTO BOT',
-      'bonus': 'BONUS',
-      'ad_space': 'ADVERTISEMENT SPACE',
-      'click_power': 'CLICK POWER',
-      'no_ads': 'NO ADS',
-      'insufficient_funds': 'Insufficient funds!',
-      'more_coins': 'Collect more coins!',
-      'bonus_loading': '...',
-      'ad_error': 'Video unavailable (Check connection)',
-    },
-    'pt': {
-      'app_title': 'Plástico Bolha Tycoon',
-      'tip_slide': 'Deslize o dedo para estourar várias bolhas!',
-      'tip_shop': 'Dica: Vá na Loja e melhore seu clique!',
-      'level_up': 'LEVEL UP!\nNível @level alcançado!',
-      'next_goal': 'Nível @next em @percent%',
-      'welcome_back': 'Bem-vindo de volta!',
-      'offline_work': 'Seu Auto Bot trabalhou por @seconds s.',
-      'collect_all': 'COLETAR TUDO',
-      'coming_soon_title': 'Em Breve',
-      'coming_soon_msg': 'Esta funcionalidade estará disponível assim que o app for aprovado na Play Store!',
-      'understood': 'Entendi',
-      'loading_ad': 'Carregando anúncio... Tente novamente em 5s.',
-      'reward_title': 'Recompensa Recebida!',
-      'reward_msg': 'Você ganhou @amount moedas!',
-      'level': 'NÍVEL',
-      'auto_bot': 'AUTO ROBÔ',
-      'bonus': 'BÔNUS',
-      'ad_space': 'ESPAÇO PUBLICITÁRIO',
-      'click_power': 'FORÇA DO CLICK',
-      'no_ads': 'SEM ADS',
-      'insufficient_funds': 'Moedas insuficientes!',
-      'more_coins': 'Junte mais moedas!',
-      'bonus_loading': '...',
-      'ad_error': 'Vídeo indisponível (Verifique conexão)',
-    },
-    'es': {
-      'app_title': 'Plástico Burbuja Tycoon',
-      'tip_slide': '¡Desliza el dedo para explotar burbujas!',
-      'tip_shop': 'Consejo: ¡Ve a la Tienda y mejora tu clic!',
-      'level_up': '¡NIVEL SUPERADO!\n¡Nivel @level alcanzado!',
-      'next_goal': 'Nivel @next en @percent%',
-      'welcome_back': '¡Bienvenido de nuevo!',
-      'offline_work': 'Tu Auto Bot trabajó por @seconds s.',
-      'collect_all': 'RECOGER TODO',
-      'coming_soon_title': 'Próximamente',
-      'coming_soon_msg': '¡Esta función estará disponible pronto!',
-      'understood': 'Entendido',
-      'loading_ad': 'Cargando anuncio... Intenta en 5s.',
-      'reward_title': '¡Recompensa Recibida!',
-      'reward_msg': '¡Ganaste @amount monedas!',
-      'level': 'NIVEL',
-      'auto_bot': 'AUTO BOT',
-      'bonus': 'BONUS',
-      'ad_space': 'ESPACIO PUBLICITARIO',
-      'click_power': 'PODER CLICK',
-      'no_ads': 'NO ADS',
-      'insufficient_funds': '¡Fondos insuficientes!',
-      'more_coins': '¡Consigue más monedas!',
-      'bonus_loading': '...',
-      'ad_error': 'Video no disponible (Verificar conexión)',
-    }
+    'en': {'app_title': 'Bubble Wrap Tycoon', 'level_up': 'LEVEL UP!\nLevel @level reached!', 'welcome_back': 'Welcome back!', 'offline_work': 'Auto Bot earned:', 'collect_all': 'COLLECT', 'reward_title': 'Reward!', 'reward_msg': '+ @amount coins', 'level': 'LEVEL', 'auto_bot': 'AUTO BOT', 'bonus': 'BONUS', 'ad_space': 'AD SPACE', 'click_power': 'CLICK POWER', 'no_ads': 'NO ADS', 'insufficient_funds': 'Need more coins!', 'loading_ad': 'Loading...', 'ad_error': 'No Video', 'next_goal': 'Next: @percent%'},
+    'pt': {'app_title': 'Plástico Bolha Tycoon', 'level_up': 'LEVEL UP!\nNível @level!', 'welcome_back': 'Bem-vindo!', 'offline_work': 'Auto Bot lucrou:', 'collect_all': 'COLETAR', 'reward_title': 'Recompensa!', 'reward_msg': '+ @amount moedas', 'level': 'NÍVEL', 'auto_bot': 'AUTO ROBÔ', 'bonus': 'BÔNUS', 'ad_space': 'PUBLICIDADE', 'click_power': 'FORÇA CLICK', 'no_ads': 'SEM ADS', 'insufficient_funds': 'Faltam moedas!', 'loading_ad': 'Carregando...', 'ad_error': 'Sem Vídeo', 'next_goal': 'Prox: @percent%'},
+    'es': {'app_title': 'Plástico Burbuja Tycoon', 'level_up': 'NIVEL SUPERADO!\nNivel @level!', 'welcome_back': '¡Hola de nuevo!', 'offline_work': 'Auto Bot ganó:', 'collect_all': 'RECOGER', 'reward_title': '¡Recompensa!', 'reward_msg': '+ @amount monedas', 'level': 'NIVEL', 'auto_bot': 'AUTO BOT', 'bonus': 'BONUS', 'ad_space': 'PUBLICIDAD', 'click_power': 'PODER CLICK', 'no_ads': 'NO ADS', 'insufficient_funds': '¡Faltan monedas!', 'loading_ad': 'Cargando...', 'ad_error': 'Sin Video', 'next_goal': 'Prox: @percent%'}
   };
-
   static String translate(String key) {
     String lang = _localizedValues.containsKey(languageCode) ? languageCode : 'en';
     return _localizedValues[lang]?[key] ?? key;
@@ -117,22 +39,12 @@ class BubbleTycoonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // CONECTANDO A CHAVE MESTRA AQUI 👇
-      navigatorKey: navigatorKey,
       title: 'Bubble Tycoon',
       debugShowCheckedModeBanner: false,
-      supportedLocales: const [
-        Locale('en', ''),
-        Locale('pt', ''),
-        Locale('es', ''),
-      ],
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.fredokaTextTheme(),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.cyan,
-          brightness: Brightness.light,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.cyan, brightness: Brightness.light),
       ),
       home: const GameScreen(),
     );
@@ -141,13 +53,12 @@ class BubbleTycoonApp extends StatelessWidget {
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
-
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
-  // --- Variáveis de Estado ---
+  // --- Game State ---
   double money = 0;
   double totalEarnings = 0;
   int clickValue = 1;
@@ -157,9 +68,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
   
-  // --- PRESTIGE (Renascimento) ---
+  // --- PRESTIGE (Manual Stack Control) ---
   int prestigeLevel = 0; 
   double get prestigeMultiplier => 1.0 + (prestigeLevel * 0.20); 
+  bool _showPrestigeMenu = false; // <<< O SEGREDO: Variável de controle manual
   
   bool _isNoAdsPurchased = false;
   
@@ -174,13 +86,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   Timer? _autoClickTimer;
   bool _hasShownFirstTip = false;
 
-  // --- Efeitos Visuais ---
+  // --- Visuals ---
   late AnimationController _coinRainController;
   List<CoinParticle> _coins = [];
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- AUDIO POOL ROBUSTO ---
+  // --- Audio ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
   final int _poolSize = 4;
@@ -189,7 +101,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   final int _columns = 5;
   final int _rows = 6; 
   late int _totalBubbles;
-  final double _gridPadding = 8.0; 
   late List<GlobalKey<BubbleWidgetState>> _bubbleKeys;
 
   @override
@@ -208,10 +119,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     });
     _coinRainController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        setState(() {
-          _isRaining = false;
-          _coins.clear();
-        });
+        setState(() { _isRaining = false; _coins.clear(); });
       }
     });
 
@@ -221,20 +129,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
     
     _initGameData();
-    
-    Future.delayed(const Duration(seconds: 2), () {
-      if (totalEarnings == 0) {
-        _showTip(TranslationManager.translate('tip_slide'));
-        _hasShownFirstTip = true;
-      }
-    });
   }
 
   void _initAudioPool() {
     _sfxPool.clear();
     for (int i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency); 
+      player.setPlayerMode(PlayerMode.lowLatency);
+      // Configuração extra para estabilidade
+      player.setReleaseMode(ReleaseMode.stop); 
       _sfxPool.add(player);
     }
   }
@@ -247,48 +150,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _bannerAd?.dispose();
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
-    
-    for (var player in _sfxPool) {
-      player.dispose();
-    }
-    
+    for (var player in _sfxPool) { player.dispose(); }
     super.dispose();
   }
 
-  // --- REGENERAÇÃO DE ÁUDIO FORÇADA ---
-  void _regenerateAudioPool() {
-    print("Recriando sistema de áudio..."); 
-    for (var player in _sfxPool) {
-      try { player.dispose(); } catch (e) { }
+  // --- AUDIO DESFIBRILADOR ---
+  void _checkAudioHealth() {
+    if (_sfxPool.isEmpty) {
+      _initAudioPool();
     }
-    _sfxPool.clear(); 
-    _initAudioPool();
-    _poolIndex = 0;
   }
 
-  // --- GERENCIAMENTO DE CICLO DE VIDA ---
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused) {
       _autoClickTimer?.cancel();
       Vibration.cancel(); 
-      for (var player in _sfxPool) {
-        player.stop();
-      }
       _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
-      // Força a regeneração ao voltar para o app
-      _regenerateAudioPool();
-      setState(() {});
+      _initAudioPool(); // Reset audio on resume
     }
-  }
-
-  @override
-  void didChangeLocales(List<Locale>? locales) {
-    super.didChangeLocales(locales);
-    setState(() {});
   }
 
   void _startAutoClicker() {
@@ -320,13 +203,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     return HSVColor.fromAHSV(1.0, hue, 0.65, 0.95).toColor();
   }
 
-  String get nextGoalText {
-    String percent = (100 - (currentLevelProgress * 100)).toStringAsFixed(0);
-    return TranslationManager.translate('next_goal')
-        .replaceAll('@next', '${currentLevel + 1}')
-        .replaceAll('@percent', percent);
-  }
-
   void _addMoney(double amount) {
     if (!mounted) return;
     int oldLevel = currentLevel;
@@ -336,11 +212,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       totalEarnings += finalAmount;
     });
     if (currentLevel > oldLevel) _onLevelUp();
-    
-    if (!_hasShownFirstTip && money >= 40 && money < costClickUpgrade) {
-      _showTip(TranslationManager.translate('tip_shop'));
-      _hasShownFirstTip = true;
-    }
   }
 
   void _onLevelUp() {
@@ -348,22 +219,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _playSound('cash.wav');
     _triggerCoinRain(); 
     
-    String msg = TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel');
-    _showTip(msg, isImportant: true);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(TranslationManager.translate('level_up').replaceAll('@level', '$currentLevel')),
+      backgroundColor: levelColor,
+      duration: const Duration(seconds: 2),
+    ));
 
+    // ABRE O MENU DE PRESTIGIO DIRETAMENTE (Sem Dialog)
     if (currentLevel == 10 && prestigeLevel == 0) {
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) _showPrestigeDialog(); 
+      setState(() {
+        _showPrestigeMenu = true;
       });
     }
 
     if (!_isNoAdsPurchased) {
       if (_interstitialAd == null) _loadInterstitialAd();
-
       Future.delayed(const Duration(seconds: 5), () {
-        if (mounted) {
-           _pendingAdTrigger = true; 
-        }
+        if (mounted) _pendingAdTrigger = true; 
       });
     }
   }
@@ -372,18 +245,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _addMoney(clickValue.toDouble());
     _playSound('pop.wav');
     
-    if (!kIsWeb) {
-       try { Vibration.vibrate(duration: 15); } catch(e) {}
-    }
+    if (!kIsWeb) { try { Vibration.vibrate(duration: 15); } catch(_) {} }
 
+    // ADS
     if (_pendingAdTrigger) {
       if (_interstitialAd != null) {
-        Future.delayed(const Duration(milliseconds: 300), () {
-           if (mounted && _interstitialAd != null) { 
-             _interstitialAd!.show();
-             _pendingAdTrigger = false; 
-           }
-        });
+        _interstitialAd!.show();
+        _pendingAdTrigger = false; 
       } else {
         _loadInterstitialAd();
       }
@@ -391,47 +259,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _playSound(String file) async {
-    if (_sfxPool.isEmpty) {
-        _initAudioPool();
-    }
-    
+    _checkAudioHealth(); 
     try {
         final player = _sfxPool[_poolIndex];
-        if (player.state == PlayerState.playing) {
-           await player.stop();
-        }
+        if (player.state == PlayerState.playing) await player.stop();
         player.play(AssetSource('audio/$file'), volume: 0.6);
         _poolIndex = (_poolIndex + 1) % _poolSize;
     } catch (e) {
-        _regenerateAudioPool();
+        _initAudioPool(); 
     }
   }
 
-  void _showTip(String message, {bool isImportant = false}) {
-    // Usa navigatorKey para garantir contexto válido
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(isImportant ? Icons.stars : Icons.lightbulb, color: Colors.yellowAccent),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
-          ],
-        ),
-        backgroundColor: isImportant ? levelColor : Colors.blueGrey.shade800,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(10),
-        duration: Duration(seconds: isImportant ? 4 : 3),
-      ),
-    );
-  }
-
   void _handleInput(PointerEvent details) {
+    // Bloqueia input se o menu estiver aberto
+    if (_showPrestigeMenu) return;
+
     final RenderBox? box = context.findRenderObject() as RenderBox?;
     if (box == null) return;
     for (var key in _bubbleKeys) {
@@ -461,69 +303,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   Future<void> _checkOfflineEarningsOnResume() async {
     final prefs = await SharedPreferences.getInstance();
     int? lastSeen = prefs.getInt('last_seen');
-    if (lastSeen != null) _calculateAndShowOfflineEarnings(lastSeen);
-  }
-
-  void _calculateAndShowOfflineEarnings(int lastSeenTime) {
-    int currentTime = DateTime.now().millisecondsSinceEpoch;
-    int secondsPassed = ((currentTime - lastSeenTime) / 1000).floor();
-
-    if (secondsPassed > 60 && autoClickRate > 0) {
-      if (secondsPassed > 86400) secondsPassed = 86400;
-      double earned = secondsPassed * autoClickRate;
-      
-      // Usa navigatorKey para diálogo seguro
-      final context = navigatorKey.currentContext;
-      if (context == null) return;
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: Text(TranslationManager.translate('welcome_back')),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.access_time_filled, size: 50, color: Colors.orange),
-              const SizedBox(height: 10),
-              Text(TranslationManager.translate('offline_work').replaceAll('@seconds', '$secondsPassed')),
-              const SizedBox(height: 10),
-              Text("+ ${formatMoney(earned)}", 
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green)),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                _addMoney(earned);
-                _triggerCoinRain(); 
-                Navigator.of(context).pop();
-              },
-              child: Text(TranslationManager.translate('collect_all')),
-            )
-          ],
-        ),
-      );
+    if (lastSeen != null) {
+        int currentTime = DateTime.now().millisecondsSinceEpoch;
+        int secondsPassed = ((currentTime - lastSeenTime) / 1000).floor();
+        if (secondsPassed > 60 && autoClickRate > 0) {
+            if (secondsPassed > 86400) secondsPassed = 86400;
+            double earned = secondsPassed * autoClickRate;
+            
+            if (mounted) {
+               _addMoney(earned);
+               _triggerCoinRain();
+               // Usamos SnackBar aqui também para garantir
+               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                 content: Text("${TranslationManager.translate('offline_work')} +${formatMoney(earned)}"),
+                 backgroundColor: Colors.green,
+                 duration: const Duration(seconds: 4),
+               ));
+            }
+        }
     }
   }
 
-  void _showComingSoon() {
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(TranslationManager.translate('coming_soon_title')),
-        content: Text(TranslationManager.translate('coming_soon_msg')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(TranslationManager.translate('understood'))),
-        ],
-      )
-    );
-  }
-
-  // --- PRESTIGE SYSTEM ---
+  // --- PRESTIGE SYSTEM (LOGIC) ---
   void _doPrestige() {
     _playSound('cash.wav');
     setState(() {
@@ -538,62 +339,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       costAutoUpgrade = 100;
       _coins.clear();
       _isRaining = false;
+      _showPrestigeMenu = false; // FECHA O MENU MANUAL
     });
     _saveProgress();
-    
-    // SnackBar Seguro
-    final context = navigatorKey.currentContext;
-    if (context != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("RENASCIMENTO! Bônus atual: ${((prestigeMultiplier-1)*100).round()}%"),
-          backgroundColor: Colors.purpleAccent,
-          behavior: SnackBarBehavior.floating,
-        )
-      );
-    }
-  }
-
-  void _showPrestigeDialog() {
-    // --- USO DA CHAVE MESTRA (SOLUÇÃO) ---
-    // Em vez de usar o context local (que pode estar sujo ou perdido), usamos o GlobalKey.
-    final context = navigatorKey.currentContext;
-    
-    // Se por milagre o contexto for nulo, abortamos sem crashar.
-    if (context == null) return;
-
-    final currentBonus = ((prestigeMultiplier - 1.0) * 100).round();
-    final nextBonus = currentBonus + 20;
-
-    showDialog(
-      context: context,
-      barrierDismissible: true, 
-      builder: (BuildContext ctx) { 
-        return AlertDialog(
-          title: const Text("👑 RENASCIMENTO"),
-          content: Text(
-            "O jogo está muito difícil?\n\n"
-            "Reinicie agora para ganhar um BÔNUS PERMANENTE de +20% em todos os ganhos!\n\n"
-            "Atual: $currentBonus%\n"
-            "Após Renascer: $nextBonus%"
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(), 
-                child: const Text("Cancelar")
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                _doPrestige(); 
-              },
-              child: const Text("RENASCER AGORA", style: TextStyle(color: Colors.white)),
-            )
-          ],
-        );
-      }
-    );
   }
 
   Future<void> _saveProgress() async {
@@ -629,19 +377,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _loadInterstitialAd();
       _loadRewardedAd();
     }
-
-    int? lastSeen = prefs.getInt('last_seen');
-    if (lastSeen != null) {
-      Future.delayed(const Duration(seconds: 1), () => _calculateAndShowOfflineEarnings(lastSeen));
-    }
-
+    
+    // Auto check prestige on load
     if (currentLevel >= 10 && prestigeLevel == 0) {
-      Future.delayed(const Duration(seconds: 3), () { 
-        if (mounted) _showPrestigeDialog(); 
+      Future.delayed(const Duration(seconds: 2), () {
+        if(mounted) setState(() => _showPrestigeMenu = true);
       });
     }
   }
 
+  // --- ADS CONFIG ---
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
     _bannerAd = BannerAd(
@@ -658,21 +403,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _loadInterstitialAd() {
     if (_isNoAdsPurchased) return;
     if (_interstitialAd != null) return;
-
     InterstitialAd.load(
       adUnitId: 'ca-app-pub-3940256099942544/1033173712', 
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
-          _interstitialLoadAttempts = 0; 
+          _interstitialLoadAttempts = 0;
           _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-              _interstitialAd = null; 
-              // FORCE AUDIO RESPAWN (Correção do som sumindo)
-              _regenerateAudioPool();
-              _loadInterstitialAd(); 
+              _interstitialAd = null;
+              _initAudioPool(); // RESET AUDIO AFTER AD
+              _loadInterstitialAd();
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
@@ -698,10 +441,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
-          setState(() {
-            _rewardedAd = ad;
-            _isRewardedAdReady = true;
-          });
+          setState(() { _rewardedAd = ad; _isRewardedAdReady = true; });
         },
         onAdFailedToLoad: (err) {
           setState(() => _isRewardedAdReady = false);
@@ -712,59 +452,40 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _showRewardedAd() {
     if (_rewardedAd == null || !_isRewardedAdReady) {
-      _showTip(TranslationManager.translate('loading_ad'));
       _loadRewardedAd();
       return;
     }
-
     _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
       double bonus = (autoClickRate > 0) ? autoClickRate * 120 : 500;
       _addMoney(bonus);
       _playSound('cash.wav');
       _triggerCoinRain(); 
-      // Dialogo seguro via chave mestra
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: Text(TranslationManager.translate('reward_title')),
-            content: Text(TranslationManager.translate('reward_msg').replaceAll('@amount', formatMoney(bonus))),
-            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
-          )
-        );
-      }
     });
-    
-    _regenerateAudioPool();
+    _initAudioPool(); // RESET AUDIO
     _rewardedAd = null;
     _isRewardedAdReady = false;
     _loadRewardedAd();
   }
 
+  // --- UI BUILD (A MÁGICA ACONTECE AQUI) ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // USAMOS STACK PARA DESENHAR O MENU MANUALMENTE
       body: Stack(
         children: [
+          // 1. O Jogo Base
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
                 colors: [Color(0xFFE0F7FA), Colors.white],
               ),
             ),
             child: SafeArea(
               child: Column(
                 children: [
-                  LinearProgressIndicator(
-                    value: currentLevelProgress,
-                    backgroundColor: Colors.black12,
-                    color: levelColor,
-                    minHeight: 8,
-                  ),
-                  
+                  LinearProgressIndicator(value: currentLevelProgress, backgroundColor: Colors.black12, color: levelColor, minHeight: 8),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: Row(
@@ -774,62 +495,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start, 
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  "${TranslationManager.translate('level')} $currentLevel", 
-                                  style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)
-                                ),
-                                
+                            Row(children: [
+                                Text("${TranslationManager.translate('level')} $currentLevel", style: TextStyle(fontSize: 18, color: levelColor, fontWeight: FontWeight.bold)),
                                 if (currentLevel >= 10)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
                                     child: SizedBox(
                                       height: 28, 
                                       child: ElevatedButton.icon(
+                                        // BOTÃO APENAS ALTERA A VARIÁVEL
                                         onPressed: () {
-                                            if (!kIsWeb) {
-                                                try { Vibration.vibrate(duration: 50); } catch (_) {}
-                                            }
-                                            // A CHAMADA AGORA É SEGURA (Via Chave Mestra)
-                                            _showPrestigeDialog();
+                                            if(!kIsWeb) { try { Vibration.vibrate(duration: 50); } catch(_){} }
+                                            setState(() => _showPrestigeMenu = true);
                                         },
                                         icon: const Icon(Icons.auto_awesome, size: 12, color: Colors.white),
-                                        label: const Text(
-                                          "RESTART", 
-                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.purpleAccent,
-                                          foregroundColor: Colors.white,
-                                          elevation: 4,
-                                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, 
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        ),
+                                        label: const Text("RESTART", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent, foregroundColor: Colors.white, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                                       ),
                                     ),
                                   )
-                              ],
-                            ),
-
-                            Text(nextGoalText, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                          
-                            Row(
-                              children: [
+                              ]),
+                            Text(TranslationManager.translate('next_goal').replaceAll('@percent', (100 - (currentLevelProgress * 100)).toStringAsFixed(0)), style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                            Row(children: [
                                 const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 32),
                                 const SizedBox(width: 5),
-                                Text(formatMoney(money), 
-                                  style: TextStyle(
-                                    fontSize: 36, fontWeight: FontWeight.w900, height: 1,
-                                    color: Colors.blueGrey.shade900,
-                                  )
-                                ),
-                              ],
-                            ),
+                                Text(formatMoney(money), style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, height: 1, color: Colors.blueGrey.shade900)),
+                              ]),
                           ],
                         ),
-                        
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                           if (!_isNoAdsPurchased)
                             GestureDetector(
@@ -838,87 +531,99 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 duration: const Duration(milliseconds: 300),
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: _isRewardedAdReady ? Colors.pinkAccent : Colors.grey.shade300,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: _isRewardedAdReady 
-                                    ? [BoxShadow(color: Colors.pinkAccent.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 3))]
-                                    : [],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                                decoration: BoxDecoration(color: _isRewardedAdReady ? Colors.pinkAccent : Colors.grey.shade300, borderRadius: BorderRadius.circular(20)),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
                                     const Icon(Icons.play_circle_fill, color: Colors.white, size: 16),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      _isRewardedAdReady ? TranslationManager.translate('bonus') : TranslationManager.translate('bonus_loading'), 
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)
-                                    ),
-                                  ],
-                                ),
+                                    Text(_isRewardedAdReady ? TranslationManager.translate('bonus') : '...', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  ]),
                               ),
                             ),
-                            
                           Text(TranslationManager.translate('auto_bot'), style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
                           Text("+${formatMoney(autoClickRate)}/s", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: levelColor)),
                         ]),
                       ],
                     ),
                   ),
-                  
                   Expanded(
                     child: Listener(
                       onPointerMove: _handleInput,
                       onPointerDown: _handleInput,
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: _gridPadding),
+                        padding: const EdgeInsets.all(8),
                         child: Center( 
                           child: AspectRatio(
                             aspectRatio: _columns / _rows,
                             child: GridView.builder(
                               physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: _columns, 
-                                mainAxisSpacing: _gridPadding, 
-                                crossAxisSpacing: _gridPadding,
-                                childAspectRatio: 1.0,
-                              ),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: _columns, mainAxisSpacing: 8, crossAxisSpacing: 8),
                               itemCount: _totalBubbles,
-                              itemBuilder: (context, index) => BubbleWidget(
-                                key: _bubbleKeys[index], 
-                                activeColor: levelColor,
-                              ),
+                              itemBuilder: (context, index) => BubbleWidget(key: _bubbleKeys[index], activeColor: levelColor),
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
-
                   if (!_isNoAdsPurchased)
                     Container(
-                      height: 60,
-                      width: double.infinity,
-                      color: Colors.grey.shade200,
-                      alignment: Alignment.center,
-                      child: (_isBannerAdLoaded && _bannerAd != null)
-                          ? AdWidget(ad: _bannerAd!)
-                          : Text(TranslationManager.translate('ad_space'), style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      height: 60, width: double.infinity, color: Colors.grey.shade200, alignment: Alignment.center,
+                      child: (_isBannerAdLoaded && _bannerAd != null) ? AdWidget(ad: _bannerAd!) : const Text("AD", style: TextStyle(fontSize: 10, color: Colors.grey)),
                     ),
-
                   _buildStore(),
                 ],
               ),
             ),
           ),
 
-          if (_isRaining)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: CoinRainPainter(_coins),
+          if (_isRaining) Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: CoinRainPainter(_coins)))),
+
+          // 2. O MENU DE RENASCIMENTO (MANUAL OVERLAY)
+          // Isso roda POR CIMA de tudo, dentro do próprio Stack. Impossível falhar.
+          if (_showPrestigeMenu)
+            Container(
+                color: Colors.black.withOpacity(0.8), // Fundo Escuro
+                width: double.infinity,
+                height: double.infinity,
+                alignment: Alignment.center,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Card(
+                    elevation: 10,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(25.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.auto_awesome, size: 50, color: Colors.purple),
+                          const SizedBox(height: 15),
+                          const Text("RENASCIMENTO", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 10),
+                          const Text("Reinicie seu progresso para ganhar\n+20% DE LUCRO ETERNO!", textAlign: TextAlign.center),
+                          const SizedBox(height: 20),
+                          Text("Atual: ${((prestigeMultiplier - 1)*100).round()}% -> Novo: ${((prestigeMultiplier - 1)*100 + 20).round()}%", 
+                               style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 16)),
+                          const SizedBox(height: 25),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              TextButton(
+                                onPressed: () => setState(() => _showPrestigeMenu = false), // Só esconde
+                                child: const Text("CANCELAR", style: TextStyle(color: Colors.grey))
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                                onPressed: _doPrestige, // Executa e esconde
+                                child: const Text("RENASCER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                              )
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
             ),
         ],
       ),
@@ -926,163 +631,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   Widget _buildStore() {
+    // Loja Simplificada para caber no código
     return Container(
-      height: 170, 
-      padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: Offset(0, -3))],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch, 
-        children: [
-          Expanded( 
-            child: _UpgradeCard(
-              title: TranslationManager.translate('click_power'),
-              level: levelClick,
-              cost: costClickUpgrade,
-              icon: Icons.touch_app_rounded,
-              canBuy: money >= costClickUpgrade,
-              formatCost: formatMoney,
-              onTap: () {
-                if (money >= costClickUpgrade) {
-                  _playSound('cash.wav');
-                  setState(() {
-                    money -= costClickUpgrade;
-                    levelClick++;
-                    clickValue++;
-                    costClickUpgrade *= 1.5;
-                  });
-                  _saveProgress();
-                } else {
-                  _showTip(TranslationManager.translate('insufficient_funds'));
-                }
-              },
-            ),
-          ),
-          
-          const SizedBox(width: 8), 
-
-          Expanded( 
-            child: _UpgradeCard(
-              title: TranslationManager.translate('auto_bot'),
-              level: levelAuto,
-              cost: costAutoUpgrade,
-              icon: Icons.smart_toy_rounded,
-              canBuy: money >= costAutoUpgrade,
-              formatCost: formatMoney,
-              onTap: () {
-                if (money >= costAutoUpgrade) {
-                  _playSound('cash.wav');
-                  setState(() {
-                    money -= costAutoUpgrade;
-                    levelAuto++;
-                    autoClickRate += 2;
-                    costAutoUpgrade *= 1.5;
-                    _startAutoClicker();
-                  });
-                  _saveProgress();
-                } else {
-                  _showTip(TranslationManager.translate('more_coins'));
-                }
-              },
-            ),
-          ),
-
+      height: 140, padding: const EdgeInsets.all(10),
+      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      child: Row(children: [
+          Expanded(child: _UpgradeCard(title: "Click", level: levelClick, cost: costClickUpgrade, icon: Icons.touch_app, canBuy: money >= costClickUpgrade, formatCost: formatMoney, onTap: () {
+             if (money >= costClickUpgrade) {
+                _playSound('cash.wav');
+                setState(() { money -= costClickUpgrade; levelClick++; clickValue++; costClickUpgrade *= 1.5; }); _saveProgress();
+             }
+          })),
           const SizedBox(width: 8),
-
-          if (!_isNoAdsPurchased)
-            Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _showComingSoon,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFD700), Color(0xFFFF8F00)],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                flex: 6,
-                                child: Column(
-                                  children: [
-                                    const Expanded(
-                                      flex: 3, 
-                                      child: FittedBox(child: Icon(Icons.block_flipped, color: Colors.white))
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          TranslationManager.translate('no_ads'),
-                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              
-                              const Spacer(flex: 1),
-
-                              Expanded(
-                                flex: 3,
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: Colors.redAccent.shade700,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const FittedBox(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(2.0),
-                                      child: Text(
-                                        "\$2.79",
-                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          top: 0, right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(10), topRight: Radius.circular(20)),
-                            ),
-                            child: const Text("-70%", style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.w900)),
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+          Expanded(child: _UpgradeCard(title: "Auto", level: levelAuto, cost: costAutoUpgrade, icon: Icons.smart_toy, canBuy: money >= costAutoUpgrade, formatCost: formatMoney, onTap: () {
+             if (money >= costAutoUpgrade) {
+                _playSound('cash.wav');
+                setState(() { money -= costAutoUpgrade; levelAuto++; autoClickRate += 2; costAutoUpgrade *= 1.5; _startAutoClicker(); }); _saveProgress();
+             }
+          })),
+      ]),
     );
   }
 }
@@ -1102,58 +669,24 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
-    _controller.addListener(() {
-      setState(() {
-        if (_controller.isAnimating) {
-          _rotationAngle = (Random().nextDouble() - 0.5) * 0.2; 
-        } else {
-          _rotationAngle = 0;
-        }
-      });
-    });
+    _controller.addListener(() { setState(() { _rotationAngle = _controller.isAnimating ? (Random().nextDouble() - 0.5) * 0.2 : 0; }); });
   }
-
   void pop() {
     if (isPopped) return;
     setState(() => isPopped = true);
     _controller.forward().then((_) => _controller.reverse());
-    Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () {
-      if (mounted) setState(() => isPopped = false);
-    });
+    Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () { if (mounted) setState(() => isPopped = false); });
   }
-
   @override
   Widget build(BuildContext context) {
     return Transform.rotate(
       angle: _rotationAngle,
-      child: ScaleTransition(
-        scale: Tween(begin: 1.0, end: 0.7).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticIn)),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: isPopped 
-              ? null 
-              : LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.9),
-                    widget.activeColor.withOpacity(0.6),
-                    widget.activeColor,
-                  ],
-                  stops: const [0.0, 0.4, 1.0]
-              ),
+      child: ScaleTransition(scale: Tween(begin: 1.0, end: 0.7).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticIn)),
+        child: AnimatedContainer(duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(shape: BoxShape.circle,
+            gradient: isPopped ? null : LinearGradient(colors: [Colors.white.withOpacity(0.9), widget.activeColor], stops: const [0.0, 1.0]),
             color: isPopped ? Colors.grey.withOpacity(0.05) : null,
-            border: Border.all(
-              color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.3), 
-              width: 1
-            ),
-            boxShadow: isPopped ? [] : [
-              BoxShadow(color: widget.activeColor.withOpacity(0.2), blurRadius: 10, offset: const Offset(4, 4)),
-              BoxShadow(color: Colors.white.withOpacity(0.8), blurRadius: 10, offset: const Offset(-4, -4))
-            ],
-          ),
+            border: Border.all(color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.3))),
           child: isPopped ? null : Container(decoration: const BoxDecoration(shape: BoxShape.circle)),
         ),
       ),
@@ -1164,115 +697,20 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
 }
 
 class _UpgradeCard extends StatelessWidget {
-  final String title;
-  final int level;
-  final double cost;
-  final IconData icon;
-  final bool canBuy;
-  final VoidCallback onTap;
-  final String Function(double) formatCost;
-  const _UpgradeCard({
-    super.key, 
-    required this.title, required this.level, required this.cost, 
-    required this.icon, required this.canBuy, required this.onTap,
-    required this.formatCost,
-  });
+  final String title; final int level; final double cost; final IconData icon; final bool canBuy; final VoidCallback onTap; final String Function(double) formatCost;
+  const _UpgradeCard({super.key, required this.title, required this.level, required this.cost, required this.icon, required this.canBuy, required this.onTap, required this.formatCost});
   @override
   Widget build(BuildContext context) {
-    return Material( 
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: canBuy ? Colors.white : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: canBuy ? Colors.blueAccent : Colors.grey.shade300, width: 2),
-            boxShadow: canBuy ? [BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2))] : [],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                flex: 4,
-                child: FittedBox(
-                  child: Icon(icon, color: canBuy ? Colors.blueAccent : Colors.grey),
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FittedBox(fit: BoxFit.scaleDown, child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
-                    FittedBox(fit: BoxFit.scaleDown, child: Text("Lvl $level", style: const TextStyle(color: Colors.grey))),
-                  ],
-                ),
-              ),
-              const Spacer(flex: 1),
-              Expanded(
-                flex: 3,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: canBuy ? Colors.green : Colors.grey, 
-                    borderRadius: BorderRadius.circular(8)
-                  ),
-                  child: FittedBox( 
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.monetization_on, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(formatCost(cost), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
+    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(15), child: Ink(
+      decoration: BoxDecoration(color: canBuy ? Colors.white : Colors.grey.shade50, borderRadius: BorderRadius.circular(15), border: Border.all(color: canBuy ? Colors.blue : Colors.grey.shade300, width: 2)),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, color: canBuy ? Colors.blue : Colors.grey),
+        Text("$title Lv$level", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        Container(margin: const EdgeInsets.only(top: 4), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: canBuy ? Colors.green : Colors.grey, borderRadius: BorderRadius.circular(5)), child: Text(formatCost(cost), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)))
+      ]),
+    ));
   }
 }
 
-class CoinParticle {
-  double x = Random().nextDouble() * 400; 
-  double y = -50 - Random().nextDouble() * 200;
-  double speed = 5 + Random().nextDouble() * 10; 
-  double rotation = Random().nextDouble() * 2 * pi;
-  Color color = Colors.amber;
-}
-
-class CoinRainPainter extends CustomPainter {
-  final List<CoinParticle> coins;
-  CoinRainPainter(this.coins);
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    for (var coin in coins) {
-      paint.color = coin.color;
-      canvas.save();
-      double drawX = coin.x % size.width;
-      canvas.translate(drawX, coin.y);
-      canvas.rotate(coin.rotation);
-      canvas.drawCircle(Offset.zero, 12, paint);
-      final borderPaint = Paint()..color = Colors.orange.shade900..style = PaintingStyle.stroke..strokeWidth = 2;
-      canvas.drawCircle(Offset.zero, 12, borderPaint);
-      TextPainter textPainter = TextPainter(
-        text: const TextSpan(text: '\$', style: TextStyle(color: Colors.black45, fontSize: 14, fontWeight: FontWeight.bold)),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(canvas, const Offset(-5, -8));
-      canvas.restore();
-    }
-  }
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
+class CoinParticle { double x = Random().nextDouble() * 400; double y = -50 - Random().nextDouble() * 200; double speed = 5 + Random().nextDouble() * 10; double rotation = Random().nextDouble() * 2 * pi; }
+class CoinRainPainter extends CustomPainter { final List<CoinParticle> coins; CoinRainPainter(this.coins); @override void paint(Canvas canvas, Size size) { final p = Paint()..color = Colors.amber; for (var c in coins) { canvas.drawCircle(Offset(c.x, c.y), 10, p); } } @override bool shouldRepaint(covariant CustomPainter oldDelegate) => true; }
