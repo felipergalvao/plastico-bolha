@@ -11,7 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.2 - LOJA RESTAURADA (NO ADS DE VOLTA)
+// VERSÃO 1.1.4 - GATILHO DE URGÊNCIA (PREÇO RISCADO)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,7 +68,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   double costClickUpgrade = 50;
   double costAutoUpgrade = 100;
   
-  // --- PRESTIGE (Manual Stack Control) ---
+  // --- PRESTIGE ---
   int prestigeLevel = 0; 
   double get prestigeMultiplier => 1.0 + (prestigeLevel * 0.20); 
   bool _showPrestigeMenu = false; 
@@ -319,9 +319,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _showComingSoon() {
-    // Como removemos o NavigatorKey, vamos usar um SnackBar simples por enquanto
-    // ou se preferir, podemos usar o setState para mostrar um overlay.
-    // Mas SnackBar é mais seguro e rápido para o aviso.
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(TranslationManager.translate('coming_soon_msg')),
@@ -627,7 +624,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  // --- LOJA RESTAURADA (3 COLUNAS) ---
+  // --- LOJA OTIMIZADA COM ANCORAGEM DE PREÇO ---
   Widget _buildStore() {
     return Container(
       height: 170, padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
@@ -650,7 +647,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
              }
           })),
           
-          // O BOTÃO DOURADO ESTÁ DE VOLTA 👇
           if (!_isNoAdsPurchased) ...[
             const SizedBox(width: 8),
             Expanded(
@@ -677,7 +673,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: Text("NO ADS", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)))),
                               ])),
                               const Spacer(flex: 1),
-                              Expanded(flex: 3, child: Container(width: double.infinity, decoration: BoxDecoration(color: Colors.redAccent.shade700, borderRadius: BorderRadius.circular(8)), child: const FittedBox(child: Padding(padding: EdgeInsets.all(2.0), child: Text("\$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))))),
+                              Expanded(flex: 3, child: Container(
+                                width: double.infinity, 
+                                decoration: BoxDecoration(color: Colors.redAccent.shade700, borderRadius: BorderRadius.circular(8)), 
+                                child: const FittedBox(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(2.0), 
+                                    child: Column( // ANCORAGEM DE PREÇO AQUI 👇
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text("\$7.99", style: TextStyle(color: Colors.white70, fontSize: 10, decoration: TextDecoration.lineThrough, decorationColor: Colors.white)),
+                                        Text("\$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      ],
+                                    )
+                                  )
+                                )
+                              )),
                             ],
                           ),
                         ),
@@ -690,6 +701,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             ),
           ]
       ]),
+    );
+  }
+}
+
+class _UpgradeCard extends StatelessWidget {
+  final String title; final int level; final double cost; final IconData icon; final bool canBuy; final VoidCallback onTap; final String Function(double) formatCost;
+  const _UpgradeCard({super.key, required this.title, required this.level, required this.cost, required this.icon, required this.canBuy, required this.onTap, required this.formatCost});
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap, 
+        borderRadius: BorderRadius.circular(15), 
+        child: Ink(
+          decoration: BoxDecoration(
+            color: canBuy ? Colors.white : Colors.grey.shade50, 
+            borderRadius: BorderRadius.circular(15), 
+            border: Border.all(color: canBuy ? Colors.blue : Colors.grey.shade300, width: 2),
+            boxShadow: canBuy ? [BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3))] : [],
+          ),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon, color: canBuy ? Colors.blue : Colors.grey),
+            Text("$title Lv$level", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            Container(margin: const EdgeInsets.only(top: 4), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: canBuy ? Colors.green : Colors.grey, borderRadius: BorderRadius.circular(5)), child: Text(formatCost(cost), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)))
+          ]),
+        )
+      ),
     );
   }
 }
@@ -734,22 +773,6 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
   }
   @override
   void dispose() { _controller.dispose(); super.dispose(); }
-}
-
-class _UpgradeCard extends StatelessWidget {
-  final String title; final int level; final double cost; final IconData icon; final bool canBuy; final VoidCallback onTap; final String Function(double) formatCost;
-  const _UpgradeCard({super.key, required this.title, required this.level, required this.cost, required this.icon, required this.canBuy, required this.onTap, required this.formatCost});
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(15), child: Ink(
-      decoration: BoxDecoration(color: canBuy ? Colors.white : Colors.grey.shade50, borderRadius: BorderRadius.circular(15), border: Border.all(color: canBuy ? Colors.blue : Colors.grey.shade300, width: 2)),
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(icon, color: canBuy ? Colors.blue : Colors.grey),
-        Text("$title Lv$level", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-        Container(margin: const EdgeInsets.only(top: 4), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: canBuy ? Colors.green : Colors.grey, borderRadius: BorderRadius.circular(5)), child: Text(formatCost(cost), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)))
-      ]),
-    ));
-  }
 }
 
 class CoinParticle { double x = Random().nextDouble() * 400; double y = -50 - Random().nextDouble() * 200; double speed = 5 + Random().nextDouble() * 10; double rotation = Random().nextDouble() * 2 * pi; }
