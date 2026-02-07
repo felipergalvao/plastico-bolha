@@ -11,7 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.1 - CORREÇÃO DE TYPO (LASTSEEN)
+// VERSÃO 1.1.2 - LOJA RESTAURADA (NO ADS DE VOLTA)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -295,13 +295,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _coinRainController.forward();
   }
 
-  // --- CORREÇÃO DO ERRO AQUI 👇 ---
   Future<void> _checkOfflineEarningsOnResume() async {
     final prefs = await SharedPreferences.getInstance();
     int? lastSeen = prefs.getInt('last_seen');
     if (lastSeen != null) {
         int currentTime = DateTime.now().millisecondsSinceEpoch;
-        // CORRIGIDO: lastSeenTime -> lastSeen
         int secondsPassed = ((currentTime - lastSeen) / 1000).floor();
         if (secondsPassed > 60 && autoClickRate > 0) {
             if (secondsPassed > 86400) secondsPassed = 86400;
@@ -318,6 +316,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             }
         }
     }
+  }
+
+  void _showComingSoon() {
+    // Como removemos o NavigatorKey, vamos usar um SnackBar simples por enquanto
+    // ou se preferir, podemos usar o setState para mostrar um overlay.
+    // Mas SnackBar é mais seguro e rápido para o aviso.
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(TranslationManager.translate('coming_soon_msg')),
+      backgroundColor: Colors.orange,
+      duration: const Duration(seconds: 3),
+    ));
   }
 
   void _doPrestige() {
@@ -617,11 +627,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
+  // --- LOJA RESTAURADA (3 COLUNAS) ---
   Widget _buildStore() {
     return Container(
-      height: 140, padding: const EdgeInsets.all(10),
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      child: Row(children: [
+      height: 170, padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
+      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -3))]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Expanded(child: _UpgradeCard(title: "Click", level: levelClick, cost: costClickUpgrade, icon: Icons.touch_app, canBuy: money >= costClickUpgrade, formatCost: formatMoney, onTap: () {
              if (money >= costClickUpgrade) {
                 _playSound('cash.wav');
@@ -635,6 +649,46 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 setState(() { money -= costAutoUpgrade; levelAuto++; autoClickRate += 2; costAutoUpgrade *= 1.5; _startAutoClicker(); }); _saveProgress();
              }
           })),
+          
+          // O BOTÃO DOURADO ESTÁ DE VOLTA 👇
+          if (!_isNoAdsPurchased) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _showComingSoon,
+                  borderRadius: BorderRadius.circular(15),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFF8F00)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))],
+                    ),
+                    child: Stack(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(flex: 6, child: Column(children: [
+                                Expanded(flex: 3, child: FittedBox(child: Icon(Icons.block_flipped, color: Colors.white))),
+                                Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: Text("NO ADS", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)))),
+                              ])),
+                              const Spacer(flex: 1),
+                              Expanded(flex: 3, child: Container(width: double.infinity, decoration: BoxDecoration(color: Colors.redAccent.shade700, borderRadius: BorderRadius.circular(8)), child: const FittedBox(child: Padding(padding: EdgeInsets.all(2.0), child: Text("\$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))))),
+                            ],
+                          ),
+                        ),
+                        Positioned(top: 0, right: 0, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(bottomLeft: Radius.circular(10), topRight: Radius.circular(15))), child: const Text("-70%", style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.w900))))
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]
       ]),
     );
   }
