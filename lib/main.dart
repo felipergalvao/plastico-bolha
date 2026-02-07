@@ -11,7 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.0 - MANUAL STACK (SEM NAVIGATOR KEY)
+// VERSÃO 1.1.1 - CORREÇÃO DE TYPO (LASTSEEN)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,7 +71,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   // --- PRESTIGE (Manual Stack Control) ---
   int prestigeLevel = 0; 
   double get prestigeMultiplier => 1.0 + (prestigeLevel * 0.20); 
-  bool _showPrestigeMenu = false; // <<< O SEGREDO: Variável de controle manual
+  bool _showPrestigeMenu = false; 
   
   bool _isNoAdsPurchased = false;
   
@@ -136,7 +136,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     for (int i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
       player.setPlayerMode(PlayerMode.lowLatency);
-      // Configuração extra para estabilidade
       player.setReleaseMode(ReleaseMode.stop); 
       _sfxPool.add(player);
     }
@@ -154,7 +153,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
-  // --- AUDIO DESFIBRILADOR ---
   void _checkAudioHealth() {
     if (_sfxPool.isEmpty) {
       _initAudioPool();
@@ -170,7 +168,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
-      _initAudioPool(); // Reset audio on resume
+      _initAudioPool(); 
     }
   }
 
@@ -226,7 +224,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       duration: const Duration(seconds: 2),
     ));
 
-    // ABRE O MENU DE PRESTIGIO DIRETAMENTE (Sem Dialog)
     if (currentLevel == 10 && prestigeLevel == 0) {
       setState(() {
         _showPrestigeMenu = true;
@@ -247,7 +244,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     
     if (!kIsWeb) { try { Vibration.vibrate(duration: 15); } catch(_) {} }
 
-    // ADS
     if (_pendingAdTrigger) {
       if (_interstitialAd != null) {
         _interstitialAd!.show();
@@ -271,7 +267,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _handleInput(PointerEvent details) {
-    // Bloqueia input se o menu estiver aberto
     if (_showPrestigeMenu) return;
 
     final RenderBox? box = context.findRenderObject() as RenderBox?;
@@ -300,12 +295,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _coinRainController.forward();
   }
 
+  // --- CORREÇÃO DO ERRO AQUI 👇 ---
   Future<void> _checkOfflineEarningsOnResume() async {
     final prefs = await SharedPreferences.getInstance();
     int? lastSeen = prefs.getInt('last_seen');
     if (lastSeen != null) {
         int currentTime = DateTime.now().millisecondsSinceEpoch;
-        int secondsPassed = ((currentTime - lastSeenTime) / 1000).floor();
+        // CORRIGIDO: lastSeenTime -> lastSeen
+        int secondsPassed = ((currentTime - lastSeen) / 1000).floor();
         if (secondsPassed > 60 && autoClickRate > 0) {
             if (secondsPassed > 86400) secondsPassed = 86400;
             double earned = secondsPassed * autoClickRate;
@@ -313,7 +310,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
             if (mounted) {
                _addMoney(earned);
                _triggerCoinRain();
-               // Usamos SnackBar aqui também para garantir
                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                  content: Text("${TranslationManager.translate('offline_work')} +${formatMoney(earned)}"),
                  backgroundColor: Colors.green,
@@ -324,7 +320,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- PRESTIGE SYSTEM (LOGIC) ---
   void _doPrestige() {
     _playSound('cash.wav');
     setState(() {
@@ -339,7 +334,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       costAutoUpgrade = 100;
       _coins.clear();
       _isRaining = false;
-      _showPrestigeMenu = false; // FECHA O MENU MANUAL
+      _showPrestigeMenu = false; 
     });
     _saveProgress();
   }
@@ -378,7 +373,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _loadRewardedAd();
     }
     
-    // Auto check prestige on load
     if (currentLevel >= 10 && prestigeLevel == 0) {
       Future.delayed(const Duration(seconds: 2), () {
         if(mounted) setState(() => _showPrestigeMenu = true);
@@ -386,7 +380,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- ADS CONFIG ---
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
     _bannerAd = BannerAd(
@@ -461,20 +454,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       _playSound('cash.wav');
       _triggerCoinRain(); 
     });
-    _initAudioPool(); // RESET AUDIO
+    _initAudioPool(); 
     _rewardedAd = null;
     _isRewardedAdReady = false;
     _loadRewardedAd();
   }
 
-  // --- UI BUILD (A MÁGICA ACONTECE AQUI) ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // USAMOS STACK PARA DESENHAR O MENU MANUALMENTE
       body: Stack(
         children: [
-          // 1. O Jogo Base
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -503,7 +493,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                     child: SizedBox(
                                       height: 28, 
                                       child: ElevatedButton.icon(
-                                        // BOTÃO APENAS ALTERA A VARIÁVEL
                                         onPressed: () {
                                             if(!kIsWeb) { try { Vibration.vibrate(duration: 50); } catch(_){} }
                                             setState(() => _showPrestigeMenu = true);
@@ -578,11 +567,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
           if (_isRaining) Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: CoinRainPainter(_coins)))),
 
-          // 2. O MENU DE RENASCIMENTO (MANUAL OVERLAY)
-          // Isso roda POR CIMA de tudo, dentro do próprio Stack. Impossível falhar.
           if (_showPrestigeMenu)
             Container(
-                color: Colors.black.withOpacity(0.8), // Fundo Escuro
+                color: Colors.black.withOpacity(0.8),
                 width: double.infinity,
                 height: double.infinity,
                 alignment: Alignment.center,
@@ -609,12 +596,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               TextButton(
-                                onPressed: () => setState(() => _showPrestigeMenu = false), // Só esconde
+                                onPressed: () => setState(() => _showPrestigeMenu = false),
                                 child: const Text("CANCELAR", style: TextStyle(color: Colors.grey))
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
-                                onPressed: _doPrestige, // Executa e esconde
+                                onPressed: _doPrestige,
                                 child: const Text("RENASCER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
                               )
                             ],
@@ -631,7 +618,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   Widget _buildStore() {
-    // Loja Simplificada para caber no código
     return Container(
       height: 140, padding: const EdgeInsets.all(10),
       decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
