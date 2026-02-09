@@ -11,7 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.5 - GOLDEN RELEASE (IDS REAIS + LOJA OTIMIZADA)
+// VERSÃO 1.1.6 - SOUND FIX + PRESTIGE AD
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -84,7 +84,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   int _interstitialLoadAttempts = 0;
 
   Timer? _autoClickTimer;
-  bool _hasShownFirstTip = false;
 
   // --- Visuals ---
   late AnimationController _coinRainController;
@@ -95,7 +94,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   // --- Audio ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 4;
+  final int _poolSize = 8; // AUMENTADO PARA 8 CANAIS
 
   // --- Grid ---
   final int _columns = 5;
@@ -123,7 +122,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       }
     });
 
-    _initAudioPool(); 
+    _initAudioPool(); // Carrega o áudio no início
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
@@ -131,14 +130,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _initGameData();
   }
 
-  void _initAudioPool() {
+  // --- FIX DE ÁUDIO: PRÉ-CARREGAMENTO ---
+  void _initAudioPool() async {
     _sfxPool.clear();
     for (int i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency);
-      player.setReleaseMode(ReleaseMode.stop); 
+      player.setPlayerMode(PlayerMode.lowLatency); // Modo de baixa latência
+      await player.setSource(AssetSource('audio/pop.wav')); // Pré-carrega o arquivo
       _sfxPool.add(player);
     }
+    // Cria um player extra só para o som de dinheiro (cash)
+    final cashPlayer = AudioPlayer();
+    await cashPlayer.setSource(AssetSource('audio/cash.wav'));
+    _sfxPool.add(cashPlayer);
   }
 
   @override
@@ -153,12 +157,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.dispose();
   }
 
-  void _checkAudioHealth() {
-    if (_sfxPool.isEmpty) {
-      _initAudioPool();
-    }
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -168,7 +166,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
-      _initAudioPool(); 
     }
   }
 
@@ -214,7 +211,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _onLevelUp() {
     _saveProgress();
-    _playSound('cash.wav');
+    _playSpecialSound('cash.wav'); // Usa o canal dedicado
     _triggerCoinRain(); 
     
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -240,7 +237,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _onPop() {
     _addMoney(clickValue.toDouble());
-    _playSound('pop.wav');
+    _playPopSound(); // Novo método otimizado
     
     if (!kIsWeb) { try { Vibration.vibrate(duration: 15); } catch(_) {} }
 
@@ -254,16 +251,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  void _playSound(String file) async {
-    _checkAudioHealth(); 
+  // --- SOM OTIMIZADO PARA CLIQUES RÁPIDOS ---
+  void _playPopSound() {
+    if (_sfxPool.isEmpty) return;
     try {
+        // Usa os primeiros N players apenas para POP
         final player = _sfxPool[_poolIndex];
-        if (player.state == PlayerState.playing) await player.stop();
-        player.play(AssetSource('audio/$file'), volume: 0.6);
-        _poolIndex = (_poolIndex + 1) % _poolSize;
+        player.resume(); // Resume é mais rápido que play se já estiver carregado
+        _poolIndex = (_poolIndex + 1) % (_poolSize); 
     } catch (e) {
-        _initAudioPool(); 
+        // Silencioso em caso de erro
     }
+  }
+
+  void _playSpecialSound(String file) async {
+     // Toca sons especiais (cash) no último slot reservado
+     if (_sfxPool.length > _poolSize) {
+        _sfxPool.last.stop();
+        _sfxPool.last.play(AssetSource('audio/$file'));
+     }
   }
 
   void _handleInput(PointerEvent details) {
@@ -327,8 +333,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     ));
   }
 
+  // --- LÓGICA DE PRESTIGE COM ANÚNCIO ---
   void _doPrestige() {
-    _playSound('cash.wav');
+    // Verifica se tem anúncio pronto e se usuário não pagou NO ADS
+    if (!_isNoAdsPurchased && _interstitialAd != null) {
+      // Configura o callback para resetar o jogo SÓ DEPOIS de fechar o anúncio
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _interstitialAd = null;
+          _executePrestigeReset(); // Reseta o jogo
+          _loadInterstitialAd(); // Carrega o próximo
+        },
+        onAdFailedToShowFullScreenContent: (ad, err) {
+          ad.dispose();
+          _interstitialAd = null;
+          _executePrestigeReset(); // Reseta mesmo se falhar o ad
+          _loadInterstitialAd();
+        }
+      );
+      _interstitialAd!.show(); // Mostra o anúncio
+    } else {
+      // Se não tiver anúncio ou for VIP, reseta direto
+      _executePrestigeReset();
+    }
+  }
+
+  void _executePrestigeReset() {
+    _playSpecialSound('cash.wav');
     setState(() {
       prestigeLevel++;
       money = 0;
@@ -390,7 +422,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
     _bannerAd = BannerAd(
-      // 💰 BANNER REAL ID
       adUnitId: 'ca-app-pub-1206696143040453/1307826041', 
       size: AdSize.banner,
       request: const AdRequest(),
@@ -403,28 +434,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _loadInterstitialAd() {
     if (_isNoAdsPurchased) return;
-    if (_interstitialAd != null) return;
     InterstitialAd.load(
-      // 💰 INTERSTITIAL REAL ID
       adUnitId: 'ca-app-pub-1206696143040453/9824210936', 
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
           _interstitialLoadAttempts = 0;
-          _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _interstitialAd = null;
-              _initAudioPool(); // RESET AUDIO AFTER AD
-              _loadInterstitialAd();
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              _interstitialAd = null;
-              _loadInterstitialAd();
-            },
-          );
         },
         onAdFailedToLoad: (error) {
           _interstitialAd = null;
@@ -439,7 +455,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _loadRewardedAd() {
     RewardedAd.load(
-      // 💰 REWARDED REAL ID
       adUnitId: 'ca-app-pub-1206696143040453/2605407915', 
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
@@ -461,10 +476,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
       double bonus = (autoClickRate > 0) ? autoClickRate * 120 : 500;
       _addMoney(bonus);
-      _playSound('cash.wav');
+      _playSpecialSound('cash.wav');
       _triggerCoinRain(); 
     });
-    _initAudioPool(); 
+    
     _rewardedAd = null;
     _isRewardedAdReady = false;
     _loadRewardedAd();
@@ -611,7 +626,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
-                                onPressed: _doPrestige,
+                                onPressed: _doPrestige, // AQUI CHAMA A NOVA FUNÇÃO COM AD
                                 child: const Text("RENASCER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
                               )
                             ],
@@ -627,7 +642,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  // --- LOJA OTIMIZADA COM ANCORAGEM DE PREÇO ---
   Widget _buildStore() {
     return Container(
       height: 170, padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
@@ -638,14 +652,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         children: [
           Expanded(child: _UpgradeCard(title: "Click", level: levelClick, cost: costClickUpgrade, icon: Icons.touch_app, canBuy: money >= costClickUpgrade, formatCost: formatMoney, onTap: () {
              if (money >= costClickUpgrade) {
-                _playSound('cash.wav');
+                _playSpecialSound('cash.wav');
                 setState(() { money -= costClickUpgrade; levelClick++; clickValue++; costClickUpgrade *= 1.5; }); _saveProgress();
              }
           })),
           const SizedBox(width: 8),
           Expanded(child: _UpgradeCard(title: "Auto", level: levelAuto, cost: costAutoUpgrade, icon: Icons.smart_toy, canBuy: money >= costAutoUpgrade, formatCost: formatMoney, onTap: () {
              if (money >= costAutoUpgrade) {
-                _playSound('cash.wav');
+                _playSpecialSound('cash.wav');
                 setState(() { money -= costAutoUpgrade; levelAuto++; autoClickRate += 2; costAutoUpgrade *= 1.5; _startAutoClicker(); }); _saveProgress();
              }
           })),
@@ -682,7 +696,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                 child: const FittedBox(
                                   child: Padding(
                                     padding: EdgeInsets.all(2.0), 
-                                    child: Column( // ANCORAGEM DE PREÇO AQUI 👇
+                                    child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text("\$7.99", style: TextStyle(color: Colors.white70, fontSize: 10, decoration: TextDecoration.lineThrough, decorationColor: Colors.white)),
