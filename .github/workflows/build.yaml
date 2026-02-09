@@ -65,6 +65,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-builds
+          retention-days: 3 # <--- TRAVA DE SEGURANÇA 1: Apaga o arquivo em 3 dias
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
+
+  # --- NOVO JOB: FAXINA AUTOMÁTICA ---
+  faxina:
+    needs: build # Só roda depois que o build terminar
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: 🧹 Apagar builds antigos (Manter apenas os 3 últimos)
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0 # Ignora idade, foca na quantidade
+          keep_minimum_runs: 5 # <--- TRAVA DE SEGURANÇA 2: Mantém sempre os 3 últimos
