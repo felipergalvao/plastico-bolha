@@ -11,7 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.6 - SOUND FIX + PRESTIGE AD
+// VERSÃO 1.1.7 - PERFORMANCE FIX (POCO F5 APPROVED)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,10 +91,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- Audio ---
+  // --- Audio LIGHTWEIGHT ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 8; // AUMENTADO PARA 8 CANAIS
+  final int _poolSize = 3; // REDUZIDO PARA 3 (Leve e Rápido)
+  final AudioPlayer _cashPlayer = AudioPlayer(); // Player dedicado para dinheiro
 
   // --- Grid ---
   final int _columns = 5;
@@ -122,7 +123,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       }
     });
 
-    _initAudioPool(); // Carrega o áudio no início
+    _initAudioPool(); 
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
@@ -130,19 +131,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _initGameData();
   }
 
-  // --- FIX DE ÁUDIO: PRÉ-CARREGAMENTO ---
+  // --- FIX DE ÁUDIO: CARREGAMENTO LEVE ---
   void _initAudioPool() async {
     _sfxPool.clear();
+    // Cria apenas 3 players para o som de POP
     for (int i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency); // Modo de baixa latência
-      await player.setSource(AssetSource('audio/pop.wav')); // Pré-carrega o arquivo
+      player.setPlayerMode(PlayerMode.lowLatency); 
+      await player.setSource(AssetSource('audio/pop.wav')); // Já deixa carregado
       _sfxPool.add(player);
     }
-    // Cria um player extra só para o som de dinheiro (cash)
-    final cashPlayer = AudioPlayer();
-    await cashPlayer.setSource(AssetSource('audio/cash.wav'));
-    _sfxPool.add(cashPlayer);
+    // Carrega o som de caixa
+    await _cashPlayer.setSource(AssetSource('audio/cash.wav'));
   }
 
   @override
@@ -154,6 +154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
     for (var player in _sfxPool) { player.dispose(); }
+    _cashPlayer.dispose();
     super.dispose();
   }
 
@@ -166,6 +167,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
+      // Recarrega áudio se necessário ao voltar
+      if (_sfxPool.isEmpty) _initAudioPool();
     }
   }
 
@@ -211,7 +214,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _onLevelUp() {
     _saveProgress();
-    _playSpecialSound('cash.wav'); // Usa o canal dedicado
+    _playCashSound();
     _triggerCoinRain(); 
     
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -237,9 +240,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _onPop() {
     _addMoney(clickValue.toDouble());
-    _playPopSound(); // Novo método otimizado
     
-    if (!kIsWeb) { try { Vibration.vibrate(duration: 15); } catch(_) {} }
+    // --- LÓGICA RÁPIDA DE SOM E VIBRAÇÃO ---
+    // 1. Toca o som (Sem await, fire and forget)
+    _playPopSound();
+    
+    // 2. Vibração ultra leve (isolada em try/catch)
+    if (!kIsWeb) { 
+      try { 
+        // Se a vibração falhar, o jogo não trava
+        Vibration.vibrate(duration: 15); 
+      } catch(_) {} 
+    }
 
     if (_pendingAdTrigger) {
       if (_interstitialAd != null) {
@@ -251,25 +263,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- SOM OTIMIZADO PARA CLIQUES RÁPIDOS ---
+  // --- SOM OTIMIZADO PARA NÃO TRAVAR ---
   void _playPopSound() {
     if (_sfxPool.isEmpty) return;
-    try {
-        // Usa os primeiros N players apenas para POP
-        final player = _sfxPool[_poolIndex];
-        player.resume(); // Resume é mais rápido que play se já estiver carregado
-        _poolIndex = (_poolIndex + 1) % (_poolSize); 
-    } catch (e) {
-        // Silencioso em caso de erro
-    }
+    // Pega o player da vez, para o que ele estava fazendo e toca de novo
+    // Isso é muito mais rápido do que verificar estado ou esperar terminar
+    final player = _sfxPool[_poolIndex];
+    player.stop().then((_) => player.resume());
+    _poolIndex = (_poolIndex + 1) % _poolSize; 
   }
 
-  void _playSpecialSound(String file) async {
-     // Toca sons especiais (cash) no último slot reservado
-     if (_sfxPool.length > _poolSize) {
-        _sfxPool.last.stop();
-        _sfxPool.last.play(AssetSource('audio/$file'));
-     }
+  void _playCashSound() {
+     _cashPlayer.stop();
+     _cashPlayer.resume();
   }
 
   void _handleInput(PointerEvent details) {
@@ -333,34 +339,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     ));
   }
 
-  // --- LÓGICA DE PRESTIGE COM ANÚNCIO ---
   void _doPrestige() {
-    // Verifica se tem anúncio pronto e se usuário não pagou NO ADS
     if (!_isNoAdsPurchased && _interstitialAd != null) {
-      // Configura o callback para resetar o jogo SÓ DEPOIS de fechar o anúncio
       _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
           _interstitialAd = null;
-          _executePrestigeReset(); // Reseta o jogo
-          _loadInterstitialAd(); // Carrega o próximo
+          _executePrestigeReset(); 
+          _loadInterstitialAd(); 
         },
         onAdFailedToShowFullScreenContent: (ad, err) {
           ad.dispose();
           _interstitialAd = null;
-          _executePrestigeReset(); // Reseta mesmo se falhar o ad
+          _executePrestigeReset(); 
           _loadInterstitialAd();
         }
       );
-      _interstitialAd!.show(); // Mostra o anúncio
+      _interstitialAd!.show(); 
     } else {
-      // Se não tiver anúncio ou for VIP, reseta direto
       _executePrestigeReset();
     }
   }
 
   void _executePrestigeReset() {
-    _playSpecialSound('cash.wav');
+    _playCashSound();
     setState(() {
       prestigeLevel++;
       money = 0;
@@ -476,7 +478,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
       double bonus = (autoClickRate > 0) ? autoClickRate * 120 : 500;
       _addMoney(bonus);
-      _playSpecialSound('cash.wav');
+      _playCashSound();
       _triggerCoinRain(); 
     });
     
@@ -626,7 +628,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
-                                onPressed: _doPrestige, // AQUI CHAMA A NOVA FUNÇÃO COM AD
+                                onPressed: _doPrestige,
                                 child: const Text("RENASCER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
                               )
                             ],
@@ -652,14 +654,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         children: [
           Expanded(child: _UpgradeCard(title: "Click", level: levelClick, cost: costClickUpgrade, icon: Icons.touch_app, canBuy: money >= costClickUpgrade, formatCost: formatMoney, onTap: () {
              if (money >= costClickUpgrade) {
-                _playSpecialSound('cash.wav');
+                _playCashSound();
                 setState(() { money -= costClickUpgrade; levelClick++; clickValue++; costClickUpgrade *= 1.5; }); _saveProgress();
              }
           })),
           const SizedBox(width: 8),
           Expanded(child: _UpgradeCard(title: "Auto", level: levelAuto, cost: costAutoUpgrade, icon: Icons.smart_toy, canBuy: money >= costAutoUpgrade, formatCost: formatMoney, onTap: () {
              if (money >= costAutoUpgrade) {
-                _playSpecialSound('cash.wav');
+                _playCashSound();
                 setState(() { money -= costAutoUpgrade; levelAuto++; autoClickRate += 2; costAutoUpgrade *= 1.5; _startAutoClicker(); }); _saveProgress();
              }
           })),
