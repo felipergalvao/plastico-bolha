@@ -11,7 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.4 - GATILHO DE URGÊNCIA (PREÇO RISCADO)
+// VERSÃO 1.1.5 - GOLDEN RELEASE (IDS REAIS + LOJA OTIMIZADA)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -390,7 +390,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void _initBannerAd() {
     if (_isNoAdsPurchased) return;
     _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111', 
+      // 💰 BANNER REAL ID
+      adUnitId: 'ca-app-pub-1206696143040453/1307826041', 
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
@@ -404,7 +405,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (_isNoAdsPurchased) return;
     if (_interstitialAd != null) return;
     InterstitialAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/1033173712', 
+      // 💰 INTERSTITIAL REAL ID
+      adUnitId: 'ca-app-pub-1206696143040453/9824210936', 
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
@@ -437,7 +439,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _loadRewardedAd() {
     RewardedAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/5224354917', 
+      // 💰 REWARDED REAL ID
+      adUnitId: 'ca-app-pub-1206696143040453/2605407915', 
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
