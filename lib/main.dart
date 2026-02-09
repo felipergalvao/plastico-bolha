@@ -5,17 +5,19 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // IMPORTANTE PARA HAPTIC FEEDBACK
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.5 - AUDIO RESTORED & AD FIX
+// VERSÃO 1.1.8 - THE "SMOOTH OPERATOR" (DEBOUNCE + HAPTIC)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
+  // Força orientação retrato para evitar redraw pesado
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const BubbleTycoonApp());
 }
 
@@ -81,8 +83,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
   bool _isRewardedAdReady = false;
-  int _interstitialLoadAttempts = 0;
-
+  
   Timer? _autoClickTimer;
 
   // --- Visuals ---
@@ -91,11 +92,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- Audio STABLE ---
-  final List<AudioPlayer> _sfxPool = [];
-  int _poolIndex = 0;
-  final int _poolSize = 5; // Equilíbrio entre performance e qualidade
+  // --- Audio Engine (Simplified) ---
+  final AudioPlayer _popPlayer = AudioPlayer();
   final AudioPlayer _cashPlayer = AudioPlayer();
+  
+  // --- O SALVADOR: LIMITADOR DE FREQUÊNCIA ---
+  int _lastFeedbackTime = 0; // Controla o tempo do último som/vibração
 
   // --- Grid ---
   final int _columns = 5;
@@ -123,7 +125,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       }
     });
 
-    _initAudioPool(); 
+    _initAudio(); // Carrega áudio simples
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
@@ -131,16 +133,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _initGameData();
   }
 
-  // --- ÁUDIO ROBUSTO (VOLTA AO MÉTODO SEGURO) ---
-  void _initAudioPool() {
-    _sfxPool.clear();
-    for (int i = 0; i < _poolSize; i++) {
-      final player = AudioPlayer();
-      player.setPlayerMode(PlayerMode.lowLatency); 
-      _sfxPool.add(player);
-    }
-    // Pre-carrega cash
-    _cashPlayer.setSource(AssetSource('audio/cash.wav'));
+  void _initAudio() async {
+    // Configura players para modo de baixa latência mas sem Pool complexo
+    await _popPlayer.setPlayerMode(PlayerMode.lowLatency);
+    await _popPlayer.setSource(AssetSource('audio/pop.wav'));
+    
+    await _cashPlayer.setPlayerMode(PlayerMode.lowLatency);
+    await _cashPlayer.setSource(AssetSource('audio/cash.wav'));
   }
 
   @override
@@ -151,7 +150,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _bannerAd?.dispose();
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
-    for (var player in _sfxPool) { player.dispose(); }
+    _popPlayer.dispose();
     _cashPlayer.dispose();
     super.dispose();
   }
@@ -160,12 +159,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _autoClickTimer?.cancel();
-      Vibration.cancel(); 
       _saveProgress(); 
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
-      _initAudioPool(); // Garante audio ao voltar
     }
   }
 
@@ -228,7 +225,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
 
     if (!_isNoAdsPurchased) {
-      // Tenta carregar se estiver vazio
       if (_interstitialAd == null) _loadInterstitialAd();
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) _pendingAdTrigger = true; 
@@ -237,11 +233,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _onPop() {
+    // 1. O dinheiro entra SEMPRE (Lógica do jogo não trava)
     _addMoney(clickValue.toDouble());
-    _playPopSound(); 
     
-    if (!kIsWeb) { 
-      try { Vibration.vibrate(duration: 15); } catch(_) {} 
+    // 2. LIMITADOR DE HARDWARE (DEBOUNCE)
+    // Só permite som/vibração a cada 80ms.
+    // Isso evita o efeito "cascata de bosta" onde os comandos empilham.
+    int now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastFeedbackTime > 80) {
+      _lastFeedbackTime = now;
+      _playPopSoundSafe();
+      _vibrateSafe();
     }
 
     if (_pendingAdTrigger) {
@@ -249,29 +251,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         _interstitialAd!.show();
         _pendingAdTrigger = false; 
       } else {
-        _loadInterstitialAd(); // Se falhar, tenta carregar pro próximo
+        _loadInterstitialAd(); 
       }
     }
   }
 
-  // --- SOM CORRIGIDO: PLAY DIRETO ---
-  void _playPopSound() {
-    if (_sfxPool.isEmpty) return;
-    try {
-        final player = _sfxPool[_poolIndex];
-        // Stop antes de play as vezes causa lag, vamos de play direto
-        // O player gerencia o restart se já estiver tocando
-        player.stop();
-        player.play(AssetSource('audio/pop.wav'), volume: 0.5);
-        _poolIndex = (_poolIndex + 1) % _poolSize; 
-    } catch (e) {
-        // Ignora erro de audio pra não travar app
+  void _playPopSoundSafe() {
+    // Se o player já estiver tocando, a gente ignora (melhor perder um pop do que travar o app)
+    // Ou forçamos o stop/start de forma segura
+    if (_popPlayer.state == PlayerState.playing) {
+       _popPlayer.stop().then((_) => _popPlayer.resume());
+    } else {
+       _popPlayer.resume();
     }
+  }
+
+  void _vibrateSafe() {
+    // Usa HapticFeedback do sistema (MUITO mais leve que o plugin Vibration)
+    // SelectionClick é sutil e não trava a thread principal
+    HapticFeedback.selectionClick(); 
   }
 
   void _playCashSound() {
      _cashPlayer.stop();
-     _cashPlayer.play(AssetSource('audio/cash.wav'));
+     _cashPlayer.resume();
   }
 
   void _handleInput(PointerEvent details) {
@@ -336,11 +339,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _doPrestige() {
-    // Força tentativa de load se estiver nulo antes de desistir
-    if (!_isNoAdsPurchased && _interstitialAd == null) {
-        _loadInterstitialAd();
-        // Se ainda for nulo, o usuário vai sem ad mesmo pra não ficar preso
-    }
+    if (!_isNoAdsPurchased && _interstitialAd == null) _loadInterstitialAd();
 
     if (!_isNoAdsPurchased && _interstitialAd != null) {
       _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
@@ -359,7 +358,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       );
       _interstitialAd!.show(); 
     } else {
-      // Se não tem anúncio pronto, reseta direto (melhor que travar o botão)
       _executePrestigeReset();
     }
   }
@@ -439,7 +437,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _loadInterstitialAd() {
     if (_isNoAdsPurchased) return;
-    // Evita recarregar se já existe
     if (_interstitialAd != null) return; 
 
     InterstitialAd.load(
@@ -448,14 +445,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
-          _interstitialLoadAttempts = 0;
         },
         onAdFailedToLoad: (error) {
           _interstitialAd = null;
-          _interstitialLoadAttempts++;
-          if (_interstitialLoadAttempts < 5) {
-             Future.delayed(Duration(seconds: _interstitialLoadAttempts * 2), _loadInterstitialAd);
-          }
         },
       ),
     );
@@ -527,7 +519,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                       height: 28, 
                                       child: ElevatedButton.icon(
                                         onPressed: () {
-                                            if(!kIsWeb) { try { Vibration.vibrate(duration: 50); } catch(_){} }
+                                            // Haptic seguro no botão de restart
+                                            HapticFeedback.mediumImpact();
                                             setState(() => _showPrestigeMenu = true);
                                         },
                                         icon: const Icon(Icons.auto_awesome, size: 12, color: Colors.white),

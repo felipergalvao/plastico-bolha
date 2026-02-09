@@ -12,7 +12,7 @@ void main() {
   var nomeArquivo = 'upload-keystore.jks'; 
   var caminhosTentativa = [
     'android/app/$nomeArquivo', // Caminho padrão
-    '$nomeArquivo',             // Talvez esteja na raiz?
+    nomeArquivo,             // Talvez esteja na raiz?
     'app/$nomeArquivo'          // Variação
   ];
 
