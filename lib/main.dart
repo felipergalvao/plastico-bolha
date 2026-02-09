@@ -11,7 +11,7 @@ import 'package:vibration/vibration.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.7 - PERFORMANCE FIX (POCO F5 APPROVED)
+// VERSÃO 1.1.5 - AUDIO RESTORED & AD FIX
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,11 +91,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- Audio LIGHTWEIGHT ---
+  // --- Audio STABLE ---
   final List<AudioPlayer> _sfxPool = [];
   int _poolIndex = 0;
-  final int _poolSize = 3; // REDUZIDO PARA 3 (Leve e Rápido)
-  final AudioPlayer _cashPlayer = AudioPlayer(); // Player dedicado para dinheiro
+  final int _poolSize = 5; // Equilíbrio entre performance e qualidade
+  final AudioPlayer _cashPlayer = AudioPlayer();
 
   // --- Grid ---
   final int _columns = 5;
@@ -131,18 +131,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _initGameData();
   }
 
-  // --- FIX DE ÁUDIO: CARREGAMENTO LEVE ---
-  void _initAudioPool() async {
+  // --- ÁUDIO ROBUSTO (VOLTA AO MÉTODO SEGURO) ---
+  void _initAudioPool() {
     _sfxPool.clear();
-    // Cria apenas 3 players para o som de POP
     for (int i = 0; i < _poolSize; i++) {
       final player = AudioPlayer();
       player.setPlayerMode(PlayerMode.lowLatency); 
-      await player.setSource(AssetSource('audio/pop.wav')); // Já deixa carregado
       _sfxPool.add(player);
     }
-    // Carrega o som de caixa
-    await _cashPlayer.setSource(AssetSource('audio/cash.wav'));
+    // Pre-carrega cash
+    _cashPlayer.setSource(AssetSource('audio/cash.wav'));
   }
 
   @override
@@ -167,8 +165,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     } else if (state == AppLifecycleState.resumed) {
       _startAutoClicker();
       _checkOfflineEarningsOnResume();
-      // Recarrega áudio se necessário ao voltar
-      if (_sfxPool.isEmpty) _initAudioPool();
+      _initAudioPool(); // Garante audio ao voltar
     }
   }
 
@@ -231,6 +228,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
 
     if (!_isNoAdsPurchased) {
+      // Tenta carregar se estiver vazio
       if (_interstitialAd == null) _loadInterstitialAd();
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) _pendingAdTrigger = true; 
@@ -240,17 +238,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _onPop() {
     _addMoney(clickValue.toDouble());
+    _playPopSound(); 
     
-    // --- LÓGICA RÁPIDA DE SOM E VIBRAÇÃO ---
-    // 1. Toca o som (Sem await, fire and forget)
-    _playPopSound();
-    
-    // 2. Vibração ultra leve (isolada em try/catch)
     if (!kIsWeb) { 
-      try { 
-        // Se a vibração falhar, o jogo não trava
-        Vibration.vibrate(duration: 15); 
-      } catch(_) {} 
+      try { Vibration.vibrate(duration: 15); } catch(_) {} 
     }
 
     if (_pendingAdTrigger) {
@@ -258,24 +249,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         _interstitialAd!.show();
         _pendingAdTrigger = false; 
       } else {
-        _loadInterstitialAd();
+        _loadInterstitialAd(); // Se falhar, tenta carregar pro próximo
       }
     }
   }
 
-  // --- SOM OTIMIZADO PARA NÃO TRAVAR ---
+  // --- SOM CORRIGIDO: PLAY DIRETO ---
   void _playPopSound() {
     if (_sfxPool.isEmpty) return;
-    // Pega o player da vez, para o que ele estava fazendo e toca de novo
-    // Isso é muito mais rápido do que verificar estado ou esperar terminar
-    final player = _sfxPool[_poolIndex];
-    player.stop().then((_) => player.resume());
-    _poolIndex = (_poolIndex + 1) % _poolSize; 
+    try {
+        final player = _sfxPool[_poolIndex];
+        // Stop antes de play as vezes causa lag, vamos de play direto
+        // O player gerencia o restart se já estiver tocando
+        player.stop();
+        player.play(AssetSource('audio/pop.wav'), volume: 0.5);
+        _poolIndex = (_poolIndex + 1) % _poolSize; 
+    } catch (e) {
+        // Ignora erro de audio pra não travar app
+    }
   }
 
   void _playCashSound() {
      _cashPlayer.stop();
-     _cashPlayer.resume();
+     _cashPlayer.play(AssetSource('audio/cash.wav'));
   }
 
   void _handleInput(PointerEvent details) {
@@ -340,6 +336,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _doPrestige() {
+    // Força tentativa de load se estiver nulo antes de desistir
+    if (!_isNoAdsPurchased && _interstitialAd == null) {
+        _loadInterstitialAd();
+        // Se ainda for nulo, o usuário vai sem ad mesmo pra não ficar preso
+    }
+
     if (!_isNoAdsPurchased && _interstitialAd != null) {
       _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
@@ -357,6 +359,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       );
       _interstitialAd!.show(); 
     } else {
+      // Se não tem anúncio pronto, reseta direto (melhor que travar o botão)
       _executePrestigeReset();
     }
   }
@@ -436,6 +439,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
   void _loadInterstitialAd() {
     if (_isNoAdsPurchased) return;
+    // Evita recarregar se já existe
+    if (_interstitialAd != null) return; 
+
     InterstitialAd.load(
       adUnitId: 'ca-app-pub-1206696143040453/9824210936', 
       request: const AdRequest(),
