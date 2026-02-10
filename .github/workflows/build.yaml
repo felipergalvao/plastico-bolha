@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-builds
-          retention-days: 3 # <--- TRAVA DE SEGURANÇA 1: Apaga o arquivo em 3 dias
+          retention-days: 45 # <--- TRAVA DE SEGURANÇA 1: Apaga o arquivo em 45 dias
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
@@ -84,4 +84,4 @@ jobs:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
           retain_days: 0 # Ignora idade, foca na quantidade
-          keep_minimum_runs: 5 # <--- TRAVA DE SEGURANÇA 2: Mantém sempre os 3 últimos
+          keep_minimum_runs: 20 # <--- TRAVA DE SEGURANÇA 2: Mantém sempre os 20 últimos
