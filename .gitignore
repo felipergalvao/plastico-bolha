@@ -1,45 +1,44 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# --- FLUTTER & DART PADRÃO ---
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
+build/
+coverage/
 
-# Symbolication related
-app.*.symbols
+# --- ANDROID (SEGURANÇA MÁXIMA) ---
+# Nunca suba a Keystore (Assinatura do app)
+*.jks
+*.keystore
+*.p12
 
-# Obfuscation related
-app.*.map.json
+# Nunca suba arquivos de propriedades com senhas locais
+key.properties
+local.properties
+android/local.properties
+android/key.properties
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Cache e Lixo do Gradle (Economiza espaço e evita erro)
+.gradle/
+android/.gradle/
+gradle-wrapper.jar
+
+# Pastas de Build do Android Studio
+android/app/build/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/captures/
+
+# --- IDEs (Lixo de editor) ---
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# --- OUTROS ---
+*.log
+doc/api/
