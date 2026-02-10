@@ -1,0 +1,44 @@
+# --- FLUTTER & DART PADRÃO ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+coverage/
+
+# --- ANDROID (SEGURANÇA MÁXIMA) ---
+# Nunca suba a Keystore (Assinatura do app)
+*.jks
+*.keystore
+*.p12
+
+# Nunca suba arquivos de propriedades com senhas locais
+key.properties
+local.properties
+android/local.properties
+android/key.properties
+
+# Cache e Lixo do Gradle (Economiza espaço e evita erro)
+.gradle/
+android/.gradle/
+gradle-wrapper.jar
+
+# Pastas de Build do Android Studio
+android/app/build/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/captures/
+
+# --- IDEs (Lixo de editor) ---
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# --- OUTROS ---
+*.log
+doc/api/

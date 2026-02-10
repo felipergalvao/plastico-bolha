@@ -1,0 +1,87 @@
+name: Build Combo (Turbo Cache)
+
+on:
+  push:
+    branches: [ "master", "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # Trava de segurança
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      # OTIMIZAÇÃO 1: Ativamos o cache do Gradle aqui
+      - name: Configurar Java + Cache Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle' # <--- O SEGREDO DA VELOCIDADE
+          
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Baixar Dependências
+        run: flutter pub get
+        
+      - name: Gerar Ícones
+        run: dart run flutter_launcher_icons
+
+      # Decodifica a chave APENAS UMA VEZ para usar nos dois builds
+      - name: Decodificar Keystore
+        shell: bash
+        env:
+           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+        
+      # --- BUILD 1: APK (Para testar no celular) ---
+      - name: Construir APK (Release)
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+        env:
+          ANDROID_KEYSTORE_PATH: ../app/upload-keystore.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+
+      # --- BUILD 2: AAB (Para a Play Store) ---
+      - name: Construir App Bundle (Release)
+        run: flutter build appbundle --release --build-number=${{ github.run_number }}
+        env:
+          ANDROID_KEYSTORE_PATH: ../app/upload-keystore.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+
+      # --- UPLOADS ---
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-builds
+          retention-days: 3 # <--- TRAVA DE SEGURANÇA 1: Apaga o arquivo em 3 dias
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+
+  # --- NOVO JOB: FAXINA AUTOMÁTICA ---
+  faxina:
+    needs: build # Só roda depois que o build terminar
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: 🧹 Apagar builds antigos (Manter apenas os 3 últimos)
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0 # Ignora idade, foca na quantidade
+          keep_minimum_runs: 5 # <--- TRAVA DE SEGURANÇA 2: Mantém sempre os 3 últimos
