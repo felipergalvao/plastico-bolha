@@ -5,18 +5,17 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // IMPORTANTE PARA HAPTIC FEEDBACK
+import 'package:flutter/services.dart'; 
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// VERSÃO 1.1.8 - THE "SMOOTH OPERATOR" (DEBOUNCE + HAPTIC)
+// VERSÃO 1.2.0 - GAME JUICE (PARTICLES + ORGANIC SOUND)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
-  // Força orientação retrato para evitar redraw pesado
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const BubbleTycoonApp());
 }
@@ -92,12 +91,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
 
-  // --- Audio Engine (Simplified) ---
+  // --- Audio Engine ---
   final AudioPlayer _popPlayer = AudioPlayer();
   final AudioPlayer _cashPlayer = AudioPlayer();
   
-  // --- O SALVADOR: LIMITADOR DE FREQUÊNCIA ---
-  int _lastFeedbackTime = 0; // Controla o tempo do último som/vibração
+  int _lastFeedbackTime = 0; 
 
   // --- Grid ---
   final int _columns = 5;
@@ -125,7 +123,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       }
     });
 
-    _initAudio(); // Carrega áudio simples
+    _initAudio(); 
 
     _totalBubbles = _columns * _rows;
     _bubbleKeys = List.generate(_totalBubbles, (_) => GlobalKey<BubbleWidgetState>());
@@ -134,7 +132,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _initAudio() async {
-    // Configura players para modo de baixa latência mas sem Pool complexo
     await _popPlayer.setPlayerMode(PlayerMode.lowLatency);
     await _popPlayer.setSource(AssetSource('audio/pop.wav'));
     
@@ -233,17 +230,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _onPop() {
-    // 1. O dinheiro entra SEMPRE (Lógica do jogo não trava)
     _addMoney(clickValue.toDouble());
     
-    // 2. LIMITADOR DE HARDWARE (DEBOUNCE)
-    // Só permite som/vibração a cada 80ms.
-    // Isso evita o efeito "cascata de bosta" onde os comandos empilham.
     int now = DateTime.now().millisecondsSinceEpoch;
     if (now - _lastFeedbackTime > 80) {
       _lastFeedbackTime = now;
-      _playPopSoundSafe();
-      _vibrateSafe();
+      _playPopSoundOrganic(); // Novo som orgânico
+      HapticFeedback.lightImpact(); // Vibração mais "seca" e rápida
     }
 
     if (_pendingAdTrigger) {
@@ -256,20 +249,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  void _playPopSoundSafe() {
-    // Se o player já estiver tocando, a gente ignora (melhor perder um pop do que travar o app)
-    // Ou forçamos o stop/start de forma segura
-    if (_popPlayer.state == PlayerState.playing) {
-       _popPlayer.stop().then((_) => _popPlayer.resume());
-    } else {
-       _popPlayer.resume();
-    }
-  }
-
-  void _vibrateSafe() {
-    // Usa HapticFeedback do sistema (MUITO mais leve que o plugin Vibration)
-    // SelectionClick é sutil e não trava a thread principal
-    HapticFeedback.selectionClick(); 
+  // --- SOM ORGÂNICO ---
+  // Varia o "Pitch" (velocidade) levemente para cada estouro ser único
+  void _playPopSoundOrganic() {
+    try {
+      if (_popPlayer.state == PlayerState.playing) {
+         _popPlayer.stop();
+      }
+      // Varia entre 0.9 (mais grave) e 1.2 (mais agudo)
+      double randomPitch = 0.9 + Random().nextDouble() * 0.3;
+      _popPlayer.setPlaybackRate(randomPitch); 
+      _popPlayer.resume();
+    } catch (_) {}
   }
 
   void _playCashSound() {
@@ -519,7 +510,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                                       height: 28, 
                                       child: ElevatedButton.icon(
                                         onPressed: () {
-                                            // Haptic seguro no botão de restart
                                             HapticFeedback.mediumImpact();
                                             setState(() => _showPrestigeMenu = true);
                                         },
@@ -761,36 +751,121 @@ class BubbleWidget extends StatefulWidget {
 class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderStateMixin {
   bool isPopped = false;
   late AnimationController _controller;
-  double _rotationAngle = 0;
+  // Partículas de "Confete"
+  List<Offset> _particles = [];
+  
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
-    _controller.addListener(() { setState(() { _rotationAngle = _controller.isAnimating ? (Random().nextDouble() - 0.5) * 0.2 : 0; }); });
+    // Animação mais rápida (300ms) para ser responsiva
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _controller.addListener(() { setState(() {}); });
+    
+    // Configura partículas iniciais (invisíveis por enquanto)
+    _generateParticles();
   }
+  
+  void _generateParticles() {
+    _particles = List.generate(6, (index) {
+        // Gera direções aleatórias para as partículas explodirem
+        double angle = (index / 6) * 2 * pi;
+        return Offset(cos(angle), sin(angle));
+    });
+  }
+
   void pop() {
     if (isPopped) return;
     setState(() => isPopped = true);
-    _controller.forward().then((_) => _controller.reverse());
-    Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () { if (mounted) setState(() => isPopped = false); });
+    
+    // Efeito: Vai para frente (explode) e reseta
+    _controller.forward(from: 0.0).then((_) {
+       // Pequeno delay para regenerar a bolha visualmente
+       Future.delayed(Duration(milliseconds: 1500 + Random().nextInt(2000)), () { 
+         if (mounted) setState(() { isPopped = false; _generateParticles(); }); 
+       });
+    });
   }
+  
   @override
   Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: _rotationAngle,
-      child: ScaleTransition(scale: Tween(begin: 1.0, end: 0.7).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticIn)),
-        child: AnimatedContainer(duration: const Duration(milliseconds: 300),
-          decoration: BoxDecoration(shape: BoxShape.circle,
-            gradient: isPopped ? null : LinearGradient(colors: [Colors.white.withOpacity(0.9), widget.activeColor], stops: const [0.0, 1.0]),
-            color: isPopped ? Colors.grey.withOpacity(0.05) : null,
-            border: Border.all(color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.3))),
-          child: isPopped ? null : Container(decoration: const BoxDecoration(shape: BoxShape.circle)),
+    // Curva "Elástica" para parecer borracha
+    final double animationValue = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack).value;
+    
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        // A Bolha em si (com escala elástica)
+        Transform.scale(
+          scale: isPopped ? (1.0 - (animationValue * 0.3)) : 1.0, // Quando estoura, diminui um pouco
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: isPopped 
+                ? null 
+                : LinearGradient(
+                    begin: Alignment.topLeft, 
+                    end: Alignment.bottomRight,
+                    colors: [Colors.white.withOpacity(0.9), widget.activeColor], 
+                    stops: const [0.1, 1.0]
+                  ),
+              color: isPopped ? Colors.grey.withOpacity(0.1) : null,
+              boxShadow: isPopped ? [] : [
+                  BoxShadow(color: widget.activeColor.withOpacity(0.4), blurRadius: 4, offset: const Offset(2, 2)),
+                  const BoxShadow(color: Colors.white, blurRadius: 2, offset: Offset(-2, -2)), // Brilho especular (Plástico)
+              ],
+              border: Border.all(color: isPopped ? Colors.transparent : widget.activeColor.withOpacity(0.5), width: 1)
+            ),
+            child: isPopped ? null : Container(decoration: const BoxDecoration(shape: BoxShape.circle)),
+          ),
         ),
-      ),
+        
+        // Efeito de Explosão (Partículas)
+        if (isPopped && _controller.isAnimating)
+          CustomPaint(
+            painter: PopExplosionPainter(
+              progress: animationValue, 
+              color: widget.activeColor,
+              particles: _particles
+            ),
+            size: const Size(60, 60),
+          ),
+      ],
     );
   }
   @override
   void dispose() { _controller.dispose(); super.dispose(); }
+}
+
+// O Pintor de Partículas (Leve e Eficiente)
+class PopExplosionPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final List<Offset> particles;
+  
+  PopExplosionPainter({required this.progress, required this.color, required this.particles});
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color.withOpacity((1.0 - progress).clamp(0.0, 1.0)) // Desaparece no fim
+      ..style = PaintingStyle.fill;
+
+    final double center = size.width / 2;
+    final double explosionRadius = size.width * 0.8 * progress; // Expande conforme animação
+
+    for (var direction in particles) {
+      // Posição da partícula
+      final double dx = center + (direction.dx * explosionRadius);
+      final double dy = center + (direction.dy * explosionRadius);
+      
+      // Tamanho da partícula (diminui conforme vai longe)
+      canvas.drawCircle(Offset(dx, dy), 3 * (1.0 - progress), paint);
+    }
+  }
+  @override
+  bool shouldRepaint(covariant PopExplosionPainter oldDelegate) => true;
 }
 
 class CoinParticle { double x = Random().nextDouble() * 400; double y = -50 - Random().nextDouble() * 200; double speed = 5 + Random().nextDouble() * 10; double rotation = Random().nextDouble() * 2 * pi; }
