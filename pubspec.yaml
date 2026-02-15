@@ -39,6 +39,6 @@ flutter:
 # Se o seu ícone tiver outro nome, ajuste o "image_path" abaixo
 flutter_launcher_icons:
   android: "launcher_icon"
-  ios: true
+  ios: false
   image_path: "assets/images/icon.png"
   min_sdk_android: 21
