@@ -9,15 +9,19 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:audioplayers/audioplayers.dart'; // Mantemos para sons longos (Cash)
-import 'package:soundpool/soundpool.dart'; // A SOLUÇÃO PROFISSIONAL PARA POPS
+import 'package:flutter_soloud/flutter_soloud.dart'; // NOVO MOTOR
 
-// VERSÃO 1.2.2 - SOUNDPOOL ENGINE (ZERO LAG AUDIO)
+// VERSÃO 1.2.3 - SOLOUD ENGINE (C++ AUDIO)
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  
+  // Inicializa o motor de áudio antes de tudo
+  final soloud = SoLoud.instance;
+  await soloud.init();
+  
   runApp(const BubbleTycoonApp());
 }
 
@@ -93,14 +97,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _pendingAdTrigger = false;
   List<FloatingTextModel> _floatingTexts = []; 
 
-  // --- SOUNDPOOL ENGINE (Áudio Profissional) ---
-  // Soundpool carrega o som na RAM. Zero latência.
-  late Soundpool _soundpool;
-  int _popSoundId = -1; // ID do som carregado na memória
-  bool _soundLoaded = false;
-  
-  // AudioPlayer comum apenas para sons longos (Cash)
-  final AudioPlayer _cashPlayer = AudioPlayer();
+  // --- SOLOUD ENGINE (Áudio Profissional) ---
+  AudioSource? _popSource;
+  AudioSource? _cashSource;
   
   int _lastFeedbackTime = 0; 
 
@@ -139,24 +138,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _initAudio() async {
-    // 1. Configura o Soundpool (Motor de SFX Rápido)
-    _soundpool = Soundpool.fromOptions(options: const SoundpoolOptions(
-      streamType: StreamType.music, 
-      maxStreams: 10 // Permite até 10 estouros SIMULTÂNEOS
-    ));
-
-    // 2. Carrega o arquivo pop.wav na Memória RAM
+    // Carrega os sons na memória
     try {
-      final ByteData soundData = await rootBundle.load('assets/audio/pop.wav');
-      _popSoundId = await _soundpool.load(soundData);
-      _soundLoaded = true;
-    } catch(e) {
-      debugPrint("Erro ao carregar som: $e");
+      _popSource = await SoLoud.instance.loadAsset('assets/audio/pop.wav');
+      _cashSource = await SoLoud.instance.loadAsset('assets/audio/cash.wav');
+    } catch (e) {
+      debugPrint("Erro ao carregar audio: $e");
     }
-    
-    // 3. Configura o player de dinheiro (som longo, não precisa de pool)
-    await _cashPlayer.setPlayerMode(PlayerMode.lowLatency);
-    await _cashPlayer.setSource(AssetSource('audio/cash.wav'));
   }
 
   @override
@@ -167,8 +155,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _bannerAd?.dispose();
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
-    _soundpool.dispose(); // Limpa a memória do Soundpool
-    _cashPlayer.dispose();
     super.dispose();
   }
 
@@ -256,13 +242,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     // VISUAL: Texto Flutuante
     _spawnFloatingText(globalPosition, "+${formatMoney(earnings)}");
     
-    // ÁUDIO E HAPTICS
-    // Removemos a limitação de tempo para o SOM, mantendo apenas para o haptic (vibração)
-    // para que o som saia em TODOS os cliques, já que o Soundpool aguenta.
-    _playPopSoundHighPerformance(); 
+    // ÁUDIO (SoLoud)
+    if (_popSource != null) {
+      // Varia o pitch para ser orgânico (0.9 a 1.1)
+      SoLoud.instance.play(_popSource!, newSpeed: 0.9 + Random().nextDouble() * 0.2);
+    }
     
     int now = DateTime.now().millisecondsSinceEpoch;
-    // Vibração limitada a 40ms para não travar o motor do celular
+    // Vibração (Haptics) limitada para não travar
     if (now - _lastFeedbackTime > 40) {
        _lastFeedbackTime = now;
        HapticFeedback.selectionClick(); 
@@ -278,15 +265,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- SOM DE ALTA PERFORMANCE (SOUNDPOOL) ---
-  void _playPopSoundHighPerformance() {
-    if (_soundLoaded && _popSoundId != -1) {
-      // Varia o Pitch (0.95 a 1.05) para ser orgânico
-      double rate = 0.95 + Random().nextDouble() * 0.10;
-      _soundpool.play(_popSoundId, rate: rate);
-    }
-  }
-
   void _spawnFloatingText(Offset pos, String text) {
     setState(() {
       _floatingTexts.add(FloatingTextModel(
@@ -299,8 +277,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _playCashSound() {
-     _cashPlayer.stop();
-     _cashPlayer.resume();
+     if (_cashSource != null) {
+       SoLoud.instance.play(_cashSource!);
+     }
   }
 
   void _handleInput(PointerEvent details) {

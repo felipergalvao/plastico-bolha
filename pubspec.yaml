@@ -1,7 +1,7 @@
 name: plastico_bolha
 description: Bubble Tycoon Idle Game.
 publish_to: 'none'
-version: 1.2.2
+version: 1.2.3+18
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -10,33 +10,31 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # --- Ícones Padrão ---
+  # --- Ícones ---
   cupertino_icons: ^1.0.2
 
-  # --- Suas Bibliotecas ---
+  # --- Bibliotecas ---
   google_fonts: ^6.1.0
   shared_preferences: ^2.3.0
   google_mobile_ads: ^5.0.0
-  audioplayers: ^5.2.1
-  soundpool: ^2.4.1
+  
+  # --- O MOTOR DE ÁUDIO "FERRARI" ---
+  flutter_soloud: ^2.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
-  # --- Ferramenta de Ícones (Obrigatória para o Build) ---
   flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   
-  # --- Seus Assets ---
   assets:
     - assets/audio/
     - assets/images/
 
-# --- Configuração do Gerador de Ícones ---
-# Se o seu ícone tiver outro nome, ajuste o "image_path" abaixo
+# --- Ícones ---
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: false
