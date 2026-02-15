@@ -9,9 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart'; // Mantemos para sons longos (Cash)
+import 'package:soundpool/soundpool.dart'; // A SOLUÇÃO PROFISSIONAL PARA POPS
 
-// VERSÃO 1.2.1 - GAME JUICE SUPREMO (POOL AUDIO + 3D BUBBLES + FLOATING TEXT)
+// VERSÃO 1.2.2 - SOUNDPOOL ENGINE (ZERO LAG AUDIO)
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,11 +91,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   List<CoinParticle> _coins = [];
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
-  List<FloatingTextModel> _floatingTexts = []; // TEXTO FLUTUANTE
+  List<FloatingTextModel> _floatingTexts = []; 
 
-  // --- Audio Engine (POOL) ---
-  final List<AudioPlayer> _popPool = List.generate(5, (_) => AudioPlayer());
-  int _poolIndex = 0;
+  // --- SOUNDPOOL ENGINE (Áudio Profissional) ---
+  // Soundpool carrega o som na RAM. Zero latência.
+  late Soundpool _soundpool;
+  int _popSoundId = -1; // ID do som carregado na memória
+  bool _soundLoaded = false;
+  
+  // AudioPlayer comum apenas para sons longos (Cash)
   final AudioPlayer _cashPlayer = AudioPlayer();
   
   int _lastFeedbackTime = 0; 
@@ -134,12 +139,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   void _initAudio() async {
-    // Carrega todos os players do pool
-    for (var player in _popPool) {
-      await player.setPlayerMode(PlayerMode.lowLatency);
-      await player.setSource(AssetSource('audio/pop.wav'));
+    // 1. Configura o Soundpool (Motor de SFX Rápido)
+    _soundpool = Soundpool.fromOptions(options: const SoundpoolOptions(
+      streamType: StreamType.music, 
+      maxStreams: 10 // Permite até 10 estouros SIMULTÂNEOS
+    ));
+
+    // 2. Carrega o arquivo pop.wav na Memória RAM
+    try {
+      final ByteData soundData = await rootBundle.load('assets/audio/pop.wav');
+      _popSoundId = await _soundpool.load(soundData);
+      _soundLoaded = true;
+    } catch(e) {
+      debugPrint("Erro ao carregar som: $e");
     }
     
+    // 3. Configura o player de dinheiro (som longo, não precisa de pool)
     await _cashPlayer.setPlayerMode(PlayerMode.lowLatency);
     await _cashPlayer.setSource(AssetSource('audio/cash.wav'));
   }
@@ -152,7 +167,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _bannerAd?.dispose();
     _interstitialAd?.dispose();
     _rewardedAd?.dispose();
-    for (var p in _popPool) p.dispose(); // Limpa o pool
+    _soundpool.dispose(); // Limpa a memória do Soundpool
     _cashPlayer.dispose();
     super.dispose();
   }
@@ -241,12 +256,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     // VISUAL: Texto Flutuante
     _spawnFloatingText(globalPosition, "+${formatMoney(earnings)}");
     
+    // ÁUDIO E HAPTICS
+    // Removemos a limitação de tempo para o SOM, mantendo apenas para o haptic (vibração)
+    // para que o som saia em TODOS os cliques, já que o Soundpool aguenta.
+    _playPopSoundHighPerformance(); 
+    
     int now = DateTime.now().millisecondsSinceEpoch;
-    // Intervalo muito curto (40ms) para permitir cliques rápidos
+    // Vibração limitada a 40ms para não travar o motor do celular
     if (now - _lastFeedbackTime > 40) {
-      _lastFeedbackTime = now;
-      _playPopSoundOrganic(); 
-      HapticFeedback.selectionClick(); // Haptics leve e seco
+       _lastFeedbackTime = now;
+       HapticFeedback.selectionClick(); 
     }
 
     if (_pendingAdTrigger) {
@@ -259,20 +278,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- SOM ORGÂNICO (POOL) ---
-  void _playPopSoundOrganic() {
-    try {
-      final player = _popPool[_poolIndex];
-      // Pitch variável para som orgânico
-      double randomPitch = 0.9 + Random().nextDouble() * 0.4; // 0.9 a 1.3
-      player.setPlaybackRate(randomPitch); 
-      
-      player.stop();
-      player.resume();
-      
-      // Rotaciona o index do pool
-      _poolIndex = (_poolIndex + 1) % _popPool.length;
-    } catch (_) {}
+  // --- SOM DE ALTA PERFORMANCE (SOUNDPOOL) ---
+  void _playPopSoundHighPerformance() {
+    if (_soundLoaded && _popSoundId != -1) {
+      // Varia o Pitch (0.95 a 1.05) para ser orgânico
+      double rate = 0.95 + Random().nextDouble() * 0.10;
+      _soundpool.play(_popSoundId, rate: rate);
+    }
   }
 
   void _spawnFloatingText(Offset pos, String text) {
@@ -281,7 +293,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         id: DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(100).toString(),
         position: pos,
         text: text,
-        color: Colors.greenAccent.shade700 // Cor de dinheiro
+        color: Colors.greenAccent.shade700
       ));
     });
   }
@@ -303,7 +315,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
         if (bubbleBox.size.contains(localPos)) {
           if (key.currentState != null && !key.currentState!.isPopped) {
             key.currentState!.pop();
-            _onPop(details.position); // Passa a posição global para o texto
+            _onPop(details.position); 
           }
           break;
         }
