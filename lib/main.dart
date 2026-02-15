@@ -9,9 +9,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:flutter_soloud/flutter_soloud.dart'; // NOVO MOTOR
+import 'package:flutter_soloud/flutter_soloud.dart'; // MOTOR DE ÁUDIO C++
 
-// VERSÃO 1.2.3 - SOLOUD ENGINE (C++ AUDIO)
+// VERSÃO 1.2.4 - SOLOUD FIX (SPEED CONTROL)
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -235,17 +235,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  void _onPop(Offset globalPosition) {
+  // --- AQUI ESTAVA O ERRO (CORRIGIDO) ---
+  void _onPop(Offset globalPosition) async {
     double earnings = clickValue.toDouble() * prestigeMultiplier;
     _addMoney(earnings);
     
     // VISUAL: Texto Flutuante
     _spawnFloatingText(globalPosition, "+${formatMoney(earnings)}");
     
-    // ÁUDIO (SoLoud)
+    // ÁUDIO (SoLoud) - CORREÇÃO DE API
     if (_popSource != null) {
-      // Varia o pitch para ser orgânico (0.9 a 1.1)
-      SoLoud.instance.play(_popSource!, newSpeed: 0.9 + Random().nextDouble() * 0.2);
+      // 1. Toca o som e pega o ID (Handle)
+      var handle = await SoLoud.instance.play(_popSource!);
+      // 2. Muda a velocidade (Pitch) usando o ID
+      SoLoud.instance.setRelativePlaySpeed(handle, 0.9 + Random().nextDouble() * 0.2);
     }
     
     int now = DateTime.now().millisecondsSinceEpoch;
