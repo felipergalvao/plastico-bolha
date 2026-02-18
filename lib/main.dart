@@ -9,16 +9,28 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:flutter_soloud/flutter_soloud.dart'; // MOTOR DE ÁUDIO C++
+import 'package:flutter_soloud/flutter_soloud.dart'; 
+import 'package:in_app_purchase/in_app_purchase.dart';
 
-// VERSÃO 1.2.4 - SOLOUD FIX (SPEED CONTROL)
+// VERSÃO 1.3.0 - IAP + ANDROID 15 FIXES
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   
-  // Inicializa o motor de áudio antes de tudo
+  // --- CORREÇÃO PARA AVISOS DO GOOGLE PLAY (Android 15) ---
+  // Habilita o modo ponta-a-ponta (Edge-to-Edge)
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // Define as barras do sistema como transparentes para cumprir as novas regras
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
+  
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  
   final soloud = SoLoud.instance;
   await soloud.init();
   
@@ -30,9 +42,9 @@ class TranslationManager {
     return PlatformDispatcher.instance.locale.languageCode;
   }
   static const Map<String, Map<String, String>> _localizedValues = {
-    'en': {'app_title': 'Bubble Wrap Tycoon', 'level_up': 'LEVEL UP!\nLevel @level reached!', 'welcome_back': 'Welcome back!', 'offline_work': 'Auto Bot earned:', 'collect_all': 'COLLECT', 'reward_title': 'Reward!', 'reward_msg': '+ @amount coins', 'level': 'LEVEL', 'auto_bot': 'AUTO BOT', 'bonus': 'BONUS', 'ad_space': 'AD SPACE', 'click_power': 'CLICK POWER', 'no_ads': 'NO ADS', 'insufficient_funds': 'Need more coins!', 'loading_ad': 'Loading...', 'ad_error': 'No Video', 'next_goal': 'Next: @percent%'},
-    'pt': {'app_title': 'Plástico Bolha Tycoon', 'level_up': 'LEVEL UP!\nNível @level!', 'welcome_back': 'Bem-vindo!', 'offline_work': 'Auto Bot lucrou:', 'collect_all': 'COLETAR', 'reward_title': 'Recompensa!', 'reward_msg': '+ @amount moedas', 'level': 'NÍVEL', 'auto_bot': 'AUTO ROBÔ', 'bonus': 'BÔNUS', 'ad_space': 'PUBLICIDADE', 'click_power': 'FORÇA CLICK', 'no_ads': 'SEM ADS', 'insufficient_funds': 'Faltam moedas!', 'loading_ad': 'Carregando...', 'ad_error': 'Sem Vídeo', 'next_goal': 'Prox: @percent%'},
-    'es': {'app_title': 'Plástico Burbuja Tycoon', 'level_up': 'NIVEL SUPERADO!\nNivel @level!', 'welcome_back': '¡Hola de nuevo!', 'offline_work': 'Auto Bot ganó:', 'collect_all': 'RECOGER', 'reward_title': '¡Recompensa!', 'reward_msg': '+ @amount monedas', 'level': 'NIVEL', 'auto_bot': 'AUTO BOT', 'bonus': 'BONUS', 'ad_space': 'PUBLICIDAD', 'click_power': 'PODER CLICK', 'no_ads': 'NO ADS', 'insufficient_funds': '¡Faltan monedas!', 'loading_ad': 'Cargando...', 'ad_error': 'Sin Video', 'next_goal': 'Prox: @percent%'}
+    'en': {'app_title': 'Bubble Wrap Tycoon', 'level_up': 'LEVEL UP!\nLevel @level reached!', 'welcome_back': 'Welcome back!', 'offline_work': 'Auto Bot earned:', 'collect_all': 'COLLECT', 'reward_title': 'Reward!', 'reward_msg': '+ @amount coins', 'level': 'LEVEL', 'auto_bot': 'AUTO BOT', 'bonus': 'BONUS', 'ad_space': 'AD SPACE', 'click_power': 'CLICK POWER', 'no_ads': 'NO ADS', 'restore': 'RESTORE', 'insufficient_funds': 'Need more coins!', 'loading_ad': 'Loading...', 'ad_error': 'No Video', 'next_goal': 'Next: @percent%', 'iap_error': 'Store Error'},
+    'pt': {'app_title': 'Plástico Bolha Tycoon', 'level_up': 'LEVEL UP!\nNível @level!', 'welcome_back': 'Bem-vindo!', 'offline_work': 'Auto Bot lucrou:', 'collect_all': 'COLETAR', 'reward_title': 'Recompensa!', 'reward_msg': '+ @amount moedas', 'level': 'NÍVEL', 'auto_bot': 'AUTO ROBÔ', 'bonus': 'BÔNUS', 'ad_space': 'PUBLICIDADE', 'click_power': 'FORÇA CLICK', 'no_ads': 'SEM ADS', 'restore': 'RESTAURAR', 'insufficient_funds': 'Faltam moedas!', 'loading_ad': 'Carregando...', 'ad_error': 'Sem Vídeo', 'next_goal': 'Prox: @percent%', 'iap_error': 'Erro na Loja'},
+    'es': {'app_title': 'Plástico Burbuja Tycoon', 'level_up': 'NIVEL SUPERADO!\nNivel @level!', 'welcome_back': '¡Hola de nuevo!', 'offline_work': 'Auto Bot ganó:', 'collect_all': 'RECOGER', 'reward_title': '¡Recompensa!', 'reward_msg': '+ @amount monedas', 'level': 'NIVEL', 'auto_bot': 'AUTO BOT', 'bonus': 'BONUS', 'ad_space': 'PUBLICIDAD', 'click_power': 'PODER CLICK', 'no_ads': 'NO ADS', 'restore': 'RESTAURAR', 'insufficient_funds': '¡Faltan monedas!', 'loading_ad': 'Cargando...', 'ad_error': 'Sin Video', 'next_goal': 'Prox: @percent%', 'iap_error': 'Error de Tienda'}
   };
   static String translate(String key) {
     String lang = _localizedValues.containsKey(languageCode) ? languageCode : 'en';
@@ -79,8 +91,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   double get prestigeMultiplier => 1.0 + (prestigeLevel * 0.20); 
   bool _showPrestigeMenu = false; 
   
-  bool _isNoAdsPurchased = false;
+  bool _isNoAdsPurchased = false; // Controle de Monetização
   
+  // --- IAP (In-App Purchase) ---
+  final InAppPurchase _inAppPurchase = InAppPurchase.instance;
+  late StreamSubscription<List<PurchaseDetails>> _subscription;
+  List<ProductDetails> _products = [];
+  final String _kNoAdsId = 'no_ads_permanent'; 
+  bool _isStoreAvailable = false;
+
   // --- Ads ---
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
@@ -97,7 +116,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   bool _pendingAdTrigger = false;
   List<FloatingTextModel> _floatingTexts = []; 
 
-  // --- SOLOUD ENGINE (Áudio Profissional) ---
+  // --- SOLOUD ENGINE ---
   AudioSource? _popSource;
   AudioSource? _cashSource;
   
@@ -114,6 +133,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
+    // Configura o ouvinte de compras
+    final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase.purchaseStream;
+    _subscription = purchaseUpdated.listen((purchaseDetailsList) {
+      _listenToPurchaseUpdated(purchaseDetailsList);
+    }, onDone: () {
+      _subscription.cancel();
+    }, onError: (error) {
+      // Log silencioso
+    });
+
+    _initStore(); 
+
     _coinRainController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _coinRainController.addListener(() {
       setState(() {
@@ -137,8 +168,71 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     _initGameData();
   }
 
+  // --- IAP LOGIC ---
+  Future<void> _initStore() async {
+    final bool available = await _inAppPurchase.isAvailable();
+    if (!available) {
+      setState(() => _isStoreAvailable = false);
+      return;
+    }
+    setState(() => _isStoreAvailable = true);
+
+    const Set<String> _kIds = <String>{'no_ads_permanent'};
+    final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(_kIds);
+    if (response.productDetails.isNotEmpty) {
+      setState(() {
+        _products = response.productDetails;
+      });
+    }
+  }
+
+  void _buyNoAds() {
+    if (_products.isEmpty) {
+        _inAppPurchase.restorePurchases(); // Fallback para restaurar
+        return;
+    }
+    final PurchaseParam purchaseParam = PurchaseParam(productDetails: _products.first);
+    _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+  }
+
+  void _restorePurchases() {
+    _inAppPurchase.restorePurchases();
+  }
+
+  void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+    for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        // Aguardando
+      } else {
+        if (purchaseDetails.status == PurchaseStatus.error) {
+           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(TranslationManager.translate('iap_error'))));
+        } else if (purchaseDetails.status == PurchaseStatus.purchased || 
+                   purchaseDetails.status == PurchaseStatus.restored) {
+          _deliverProduct(purchaseDetails);
+        }
+        
+        if (purchaseDetails.pendingCompletePurchase) {
+          _inAppPurchase.completePurchase(purchaseDetails);
+        }
+      }
+    }
+  }
+
+  void _deliverProduct(PurchaseDetails purchaseDetails) {
+    if (purchaseDetails.productID == _kNoAdsId) {
+      setState(() {
+        _isNoAdsPurchased = true;
+        _bannerAd?.dispose(); // Tchau Banner!
+        _bannerAd = null;
+        _isBannerAdLoaded = false;
+      });
+      _saveProgress();
+      _playCashSound();
+      _triggerCoinRain();
+    }
+  }
+
   void _initAudio() async {
-    // Carrega os sons na memória
     try {
       _popSource = await SoLoud.instance.loadAsset('assets/audio/pop.wav');
       _cashSource = await SoLoud.instance.loadAsset('assets/audio/cash.wav');
@@ -150,6 +244,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _subscription.cancel();
     _autoClickTimer?.cancel();
     _coinRainController.dispose();
     _bannerAd?.dispose();
@@ -235,30 +330,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // --- AQUI ESTAVA O ERRO (CORRIGIDO) ---
   void _onPop(Offset globalPosition) async {
     double earnings = clickValue.toDouble() * prestigeMultiplier;
     _addMoney(earnings);
-    
-    // VISUAL: Texto Flutuante
     _spawnFloatingText(globalPosition, "+${formatMoney(earnings)}");
     
-    // ÁUDIO (SoLoud) - CORREÇÃO DE API
     if (_popSource != null) {
-      // 1. Toca o som e pega o ID (Handle)
       var handle = await SoLoud.instance.play(_popSource!);
-      // 2. Muda a velocidade (Pitch) usando o ID
       SoLoud.instance.setRelativePlaySpeed(handle, 0.9 + Random().nextDouble() * 0.2);
     }
     
     int now = DateTime.now().millisecondsSinceEpoch;
-    // Vibração (Haptics) limitada para não travar
     if (now - _lastFeedbackTime > 40) {
        _lastFeedbackTime = now;
        HapticFeedback.selectionClick(); 
     }
 
-    if (_pendingAdTrigger) {
+    if (!_isNoAdsPurchased && _pendingAdTrigger) {
       if (_interstitialAd != null) {
         _interstitialAd!.show();
         _pendingAdTrigger = false; 
@@ -337,19 +425,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(TranslationManager.translate('coming_soon_msg')),
-      backgroundColor: Colors.orange,
-      duration: const Duration(seconds: 3),
-    ));
-  }
-
   void _doPrestige() {
-    if (!_isNoAdsPurchased && _interstitialAd == null) _loadInterstitialAd();
+    if (_isNoAdsPurchased) {
+      _executePrestigeReset();
+      return;
+    }
 
-    if (!_isNoAdsPurchased && _interstitialAd != null) {
+    if (_interstitialAd == null) _loadInterstitialAd();
+
+    if (_interstitialAd != null) {
       _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
@@ -496,6 +580,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // backgroundColor: Colors.transparent, // Pode ajudar no edge-to-edge
       body: Stack(
         children: [
           Container(
@@ -505,7 +590,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                 colors: [Color(0xFFE0F7FA), Colors.white],
               ),
             ),
-            child: SafeArea(
+            child: SafeArea( // O SafeArea garante que o jogo não fique embaixo da câmera/bateria
               child: Column(
                 children: [
                   LinearProgressIndicator(value: currentLevelProgress, backgroundColor: Colors.black12, color: levelColor, minHeight: 8),
@@ -600,7 +685,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
 
           if (_isRaining) Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: CoinRainPainter(_coins)))),
           
-          // CAMADA DE TEXTO FLUTUANTE (VISUAL RICO)
           ..._floatingTexts.map((ft) => FloatingTextWidget(
             key: ValueKey(ft.id),
             model: ft,
@@ -662,6 +746,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   }
 
   Widget _buildStore() {
+    String noAdsTitle = _isNoAdsPurchased ? "VIP" : TranslationManager.translate('no_ads');
+    String noAdsPrice = _isNoAdsPurchased ? "DONE" : (_products.isNotEmpty ? _products.first.price : "\$2.79");
+    VoidCallback noAdsAction = _isNoAdsPurchased ? () {} : _buyNoAds;
+    if (!_isNoAdsPurchased && _products.isEmpty) {
+        noAdsAction = _restorePurchases;
+        noAdsPrice = TranslationManager.translate('restore');
+    }
+
     return Container(
       height: 170, padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
       decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
@@ -683,59 +775,54 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
              }
           })),
           
-          if (!_isNoAdsPurchased) ...[
-            const SizedBox(width: 8),
-            Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _showComingSoon,
-                  borderRadius: BorderRadius.circular(15),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFF8F00)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))],
-                    ),
-                    child: Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Expanded(flex: 6, child: Column(children: [
-                                Expanded(flex: 3, child: FittedBox(child: Icon(Icons.block_flipped, color: Colors.white))),
-                                Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: Text("NO ADS", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)))),
-                              ])),
-                              const Spacer(flex: 1),
-                              Expanded(flex: 3, child: Container(
-                                width: double.infinity, 
-                                decoration: BoxDecoration(color: Colors.redAccent.shade700, borderRadius: BorderRadius.circular(8)), 
-                                child: const FittedBox(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(2.0), 
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text("\$7.99", style: TextStyle(color: Colors.white70, fontSize: 10, decoration: TextDecoration.lineThrough, decorationColor: Colors.white)),
-                                        Text("\$2.79", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                      ],
-                                    )
-                                  )
+          const SizedBox(width: 8),
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: noAdsAction,
+                borderRadius: BorderRadius.circular(15),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: _isNoAdsPurchased 
+                       ? const LinearGradient(colors: [Colors.green, Colors.lightGreen])
+                       : const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFF8F00)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))],
+                  ),
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(flex: 6, child: Column(children: [
+                              Expanded(flex: 3, child: FittedBox(child: Icon(_isNoAdsPurchased ? Icons.check_circle : Icons.block_flipped, color: Colors.white))),
+                              Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: Text(noAdsTitle, style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white)))),
+                            ])),
+                            const Spacer(flex: 1),
+                            Expanded(flex: 3, child: Container(
+                              width: double.infinity, 
+                              decoration: BoxDecoration(color: _isNoAdsPurchased ? Colors.white24 : Colors.redAccent.shade700, borderRadius: BorderRadius.circular(8)), 
+                              child: FittedBox(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(2.0), 
+                                  child: Text(noAdsPrice, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                 )
-                              )),
-                            ],
-                          ),
+                              )
+                            )),
+                          ],
                         ),
+                      ),
+                      if (!_isNoAdsPurchased)
                         Positioned(top: 0, right: 0, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(bottomLeft: Radius.circular(10), topRight: Radius.circular(15))), child: const Text("-70%", style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.w900))))
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ]
+          ),
       ]),
     );
   }
@@ -768,8 +855,6 @@ class _UpgradeCard extends StatelessWidget {
     );
   }
 }
-
-// --- BOLHA 3D COM EFEITO DE CONFETES E PHYSICS ---
 
 class BubbleWidget extends StatefulWidget {
   final Color activeColor;
@@ -913,8 +998,6 @@ class ConfettiPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant ConfettiPainter oldDelegate) => true;
 }
-
-// --- CLASSES PARA TEXTO FLUTUANTE ---
 
 class FloatingTextModel {
   final String id;
