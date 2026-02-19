@@ -97,7 +97,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   late StreamSubscription<List<PurchaseDetails>> _subscription;
   List<ProductDetails> _products = [];
+  
   final String _kNoAdsId = 'no_ads_permanent'; 
+  final String _kTime1h = 'time_warp_1h';    // NOVO
+  final String _kTime4h = 'time_warp_4h';    // NOVO
+  final String _kTime12h = 'time_warp_12h';  // NOVO
+  
   bool _isStoreAvailable = false;
 
   // --- Ads ---
@@ -114,7 +119,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
   List<CoinParticle> _coins = [];
   bool _isRaining = false;
   bool _pendingAdTrigger = false;
-  List<FloatingTextModel> _floatingTexts = []; 
+  final List<FloatingTextModel> _floatingTexts = []; 
 
   // --- SOLOUD ENGINE ---
   AudioSource? _popSource;
@@ -177,7 +182,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
     setState(() => _isStoreAvailable = true);
 
-    const Set<String> _kIds = <String>{'no_ads_permanent'};
+    const Set<String> _kIds = <String>{
+      'no_ads_permanent', 
+      'time_warp_1h', 
+      'time_warp_4h', 
+      'time_warp_12h'
+    };
     final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(_kIds);
     if (response.productDetails.isNotEmpty) {
       setState(() {
@@ -193,6 +203,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: _products.first);
     _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+  }
+
+  void _buyProduct(ProductDetails product) {
+    final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
+    
+    if (product.id == _kNoAdsId) {
+      // Produto Fixo (Non-Consumable)
+      _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+    } else {
+      // Salto no Tempo (Pode comprar várias vezes - Consumable)
+      _inAppPurchase.buyConsumable(purchaseParam: purchaseParam, autoConsume: true);
+    }
   }
 
   void _restorePurchases() {
@@ -222,14 +244,41 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     if (purchaseDetails.productID == _kNoAdsId) {
       setState(() {
         _isNoAdsPurchased = true;
-        _bannerAd?.dispose(); // Tchau Banner!
+        _bannerAd?.dispose(); 
         _bannerAd = null;
         _isBannerAdLoaded = false;
       });
       _saveProgress();
       _playCashSound();
       _triggerCoinRain();
+    } 
+    // NOVOS PACOTES DE TEMPO:
+    else if (purchaseDetails.productID == _kTime1h) {
+      _applyTimeWarp(1);
+    } else if (purchaseDetails.productID == _kTime4h) {
+      _applyTimeWarp(4);
+    } else if (purchaseDetails.productID == _kTime12h) {
+      _applyTimeWarp(12);
     }
+  }
+
+  // A MÁGICA DO SALTO NO TEMPO:
+  void _applyTimeWarp(int hours) {
+    // Se o cara comprou no nível 1 e não tem auto-bot, damos um valor base de $10/s
+    double baseEarnings = autoClickRate > 0 ? autoClickRate : 10.0; 
+    
+    // Calcula: Ganho por segundo X Segundos em uma hora X Quantidade de Horas
+    double totalEarned = baseEarnings * 3600 * hours; 
+    
+    _addMoney(totalEarned);
+    _playCashSound();
+    _triggerCoinRain();
+    
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("+$hours Horas de Lucro! (+${formatMoney(totalEarned)})"),
+      backgroundColor: Colors.green,
+      duration: const Duration(seconds: 3),
+    ));
   }
 
   void _initAudio() async {
@@ -631,6 +680,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                           ],
                         ),
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                          // --- BOTÃO DA LOJA TURBO (Sempre visível) ---
+                          GestureDetector(
+                            onTap: _openTurboStore,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(color: Colors.orangeAccent, borderRadius: BorderRadius.circular(20)),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                                  Icon(Icons.rocket_launch, color: Colors.white, size: 16),
+                                  SizedBox(width: 4),
+                                  Text("TURBO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ]),
+                            ),
+                          ),
                           if (!_isNoAdsPurchased)
                             GestureDetector(
                               onTap: _showRewardedAd,
@@ -826,11 +889,62 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
       ]),
     );
   }
+
+  void _openTurboStore() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("LOJA TURBO 🚀", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 5),
+              const Text("Compre horas de lucro instantâneo!", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              _buildTimeWarpButton(_kTime1h, "Salto de 1 Hora", Icons.timer, Colors.blue),
+              const SizedBox(height: 10),
+              _buildTimeWarpButton(_kTime4h, "Salto de 4 Horas", Icons.speed, Colors.purple),
+              const SizedBox(height: 10),
+              _buildTimeWarpButton(_kTime12h, "Maleta de 12 Horas", Icons.work, Colors.orange),
+              const SizedBox(height: 10),
+            ]
+          )
+        );
+      }
+    );
+  }
+
+  Widget _buildTimeWarpButton(String id, String title, IconData icon, Color color) {
+    try {
+      final product = _products.firstWhere((p) => p.id == id);
+      return ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 55),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+        ),
+        onPressed: () {
+          Navigator.pop(context); // Fecha a janelinha
+          _buyProduct(product);   // Abre o Google Pay
+        },
+        icon: Icon(icon, size: 28),
+        label: Text("$title - ${product.price}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+      );
+    } catch (e) {
+      // Se a loja não carregou ainda
+      return const SizedBox.shrink(); 
+    }
+  }
 }
 
 class _UpgradeCard extends StatelessWidget {
   final String title; final int level; final double cost; final IconData icon; final bool canBuy; final VoidCallback onTap; final String Function(double) formatCost;
-  const _UpgradeCard({super.key, required this.title, required this.level, required this.cost, required this.icon, required this.canBuy, required this.onTap, required this.formatCost});
+  const _UpgradeCard({required this.title, required this.level, required this.cost, required this.icon, required this.canBuy, required this.onTap, required this.formatCost});
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -874,7 +988,9 @@ class BubbleWidgetState extends State<BubbleWidget> with SingleTickerProviderSta
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _controller.addListener(() { 
       setState(() {
-        for (var p in _confetti) p.update();
+        for (var p in _confetti) {
+          p.update();
+        }
       }); 
     });
   }
