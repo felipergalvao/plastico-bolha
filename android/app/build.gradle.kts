@@ -8,7 +8,9 @@ android {
     namespace = "com.galvaoapps.bubbletycoon"
     
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    
+    // 1. FORÇA O NDK MODERNO AQUI (Sintaxe Kotlin)
+    ndkVersion = "27.1.12297006"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -21,6 +23,13 @@ android {
 
     sourceSets {
         getByName("main").java.srcDirs("src/main/kotlin")
+    }
+
+    // 2. ADICIONE ESTE BLOCO AQUI (Obrigatório para o Android 15 / 16 KB)
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
     defaultConfig {

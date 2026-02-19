@@ -182,13 +182,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
     }
     setState(() => _isStoreAvailable = true);
 
-    const Set<String> _kIds = <String>{
+    const Set<String> kIds = <String>{
       'no_ads_permanent', 
       'time_warp_1h', 
       'time_warp_4h', 
       'time_warp_12h'
     };
-    final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(_kIds);
+    final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(kIds);
     if (response.productDetails.isNotEmpty) {
       setState(() {
         _products = response.productDetails;
@@ -687,7 +687,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver, Ti
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               margin: const EdgeInsets.only(bottom: 8),
                               decoration: BoxDecoration(color: Colors.orangeAccent, borderRadius: BorderRadius.circular(20)),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
                                   Icon(Icons.rocket_launch, color: Colors.white, size: 16),
                                   SizedBox(width: 4),
                                   Text("TURBO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
