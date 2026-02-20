@@ -39,6 +39,14 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // --- A MARRETA DO ANDROID 15 (16 KB) ---
+        externalNativeBuild {
+            cmake {
+                arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+                cppFlags += "-Wl,-z,max-page-size=16384"
+            }
+        }
     }
 
     signingConfigs {
